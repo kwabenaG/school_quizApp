@@ -1,0 +1,33 @@
+{
+  "name": "school-quiz-app",
+  "version": "1.0.0",
+  "description": "Junior School Quiz Application - Scrabble-style word guessing game",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "setup:supabase": "node setup-supabase.js",
+    "seed": "npm run seed --workspace=apps/backend",
+    "deploy:frontend": "cd apps/frontend && vercel --prod",
+    "deploy:backend": "cd apps/backend && railway up",
+    "deploy:all": "npm run deploy:backend && npm run deploy:frontend",
+    "start": "npm run start --workspace=apps/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "uuid": "^11.1.0"
+  }
+}

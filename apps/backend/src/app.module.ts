@@ -11,12 +11,12 @@ console.log('🔍 Environment variables:');
 console.log('SUPABASE_DB_PASSWORD:', process.env.SUPABASE_DB_PASSWORD ? 'SET' : 'NOT SET');
 console.log('SUPABASE_DB_URL:', process.env.SUPABASE_DB_URL ? 'SET' : 'NOT SET');
 console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('🔍 Using direct Supabase connection (not Pooler)');
-console.log('🔍 Host: db.kdwhvsrzcgujuqswmhbt.supabase.co');
+console.log('🔍 Using Supavisor Session Mode (IPv4 compatible)');
+console.log('🔍 Host: aws-1-eu-west-1.pooler.supabase.com');
 console.log('🔍 Port: 5432');
-console.log('🔍 Username: postgres');
+console.log('🔍 Username: postgres.kdwhvsrzcgujuqswmhbt');
 console.log('🔍 Database: postgres');
-console.log('🔍 Forcing IPv4 connection to avoid IPv6 issues');
+console.log('🔍 This avoids IPv6 issues on Railway');
 
 @Module({
   imports: [
@@ -25,9 +25,9 @@ console.log('🔍 Forcing IPv4 connection to avoid IPv6 issues');
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'db.kdwhvsrzcgujuqswmhbt.supabase.co',
+      host: 'aws-1-eu-west-1.pooler.supabase.com',
       port: 5432,
-      username: 'postgres',
+      username: 'postgres.kdwhvsrzcgujuqswmhbt',
       password: process.env.SUPABASE_DB_PASSWORD || 'password',
       database: 'postgres',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
@@ -37,10 +37,6 @@ console.log('🔍 Forcing IPv4 connection to avoid IPv6 issues');
       retryAttempts: 3,
       retryDelay: 3000,
       autoLoadEntities: true,
-      // Force IPv4 connection
-      extra: {
-        family: 4, // Force IPv4
-      },
     }),
     QuizModule,
     WordsModule,

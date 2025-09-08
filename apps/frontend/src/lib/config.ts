@@ -1,28 +1,45 @@
 // API configuration for School Quiz Frontend
 const getBaseUrl = () => {
+  // Production API URL from Vercel rewrites
+  const productionApiUrl = 'https://schoolquizapp-production.up.railway.app';
+  
+  // Development fallback
+  const developmentApiUrl = 'http://localhost:3001';
+  
+  // Check if we're in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Use environment variable if provided, otherwise use production/development defaults
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
   
-  // Debug logging (remove in production)
-  console.log('🔍 NEXT_PUBLIC_API_URL:', envUrl);
-  
-  if (!envUrl) {
-    console.log('🔍 Using localhost fallback');
-    return 'http://localhost:3001';
+  // Debug logging (only in development)
+  if (!isProduction) {
+    console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔍 NEXT_PUBLIC_API_URL:', envUrl);
+    console.log('🔍 isProduction:', isProduction);
   }
   
-  // Clean the URL - remove any leading/trailing slashes and spaces
-  const cleanUrl = envUrl.trim().replace(/^\/+|\/+$/g, '');
-  
-  // Ensure the URL has a protocol
-  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-    console.log('🔍 Using URL with protocol:', cleanUrl);
-    return cleanUrl;
+  // If environment variable is provided, use it
+  if (envUrl) {
+    const cleanUrl = envUrl.trim().replace(/^\/+|\/+$/g, '');
+    
+    // Ensure the URL has a protocol
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      if (!isProduction) console.log('🔍 Using URL with protocol:', cleanUrl);
+      return cleanUrl;
+    }
+    
+    // Add appropriate protocol based on environment
+    const isLocalhost = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
+    const finalUrl = isLocalhost ? `http://${cleanUrl}` : `https://${cleanUrl}`;
+    if (!isProduction) console.log('🔍 Using URL with added protocol:', finalUrl);
+    return finalUrl;
   }
   
-  // Add https:// if no protocol is provided
-  const finalUrl = `https://${cleanUrl}`;
-  console.log('🔍 Using URL with added protocol:', finalUrl);
-  return finalUrl;
+  // Use production URL in production, development URL in development
+  const defaultUrl = isProduction ? productionApiUrl : developmentApiUrl;
+  if (!isProduction) console.log('🔍 Using default URL:', defaultUrl);
+  return defaultUrl;
 };
 
 export const API_CONFIG = {

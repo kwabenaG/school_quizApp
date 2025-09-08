@@ -28,7 +28,7 @@ console.log('🔍 This avoids IPv6 issues on Railway');
       host: 'aws-1-eu-west-1.pooler.supabase.com',
       port: 5432,
       username: 'postgres.kdwhvsrzcgujuqswmhbt',
-      password: process.env.SUPABASE_DB_PASSWORD || 'password',
+      password: process.env.SUPABASE_DB_PASSWORD || 'poiuytrewqaA12390.',
       database: 'postgres',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync in development

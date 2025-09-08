@@ -13,22 +13,31 @@ async function bootstrap() {
   
   // Enable CORS for frontend communication
   const allowedOrigins = [
-    'http://localhost:3020', // Local developments
+    'http://localhost:3020', // Local development
     'http://localhost:3000', // Alternative local port
-    process.env.FRONTEND_URL, // Production frontend URL
+    process.env.FRONTEND_URL, // Production frontend URL from env
   ].filter(Boolean); // Remove undefined values
+
+  // Add common Vercel domains for production
+  const vercelDomains = [
+    'https://schoolquizapp.vercel.app',
+    'https://schoolquizapp-git-main.vercel.app',
+    'https://schoolquizapp-git-develop.vercel.app',
+  ];
+
+  const allAllowedOrigins = [...allowedOrigins, ...vercelDomains];
 
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
       
-      // Check if origin is allowed
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin is in allowed list
+      if (allAllowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       
-      // For production, also allow Vercel domains
+      // For production, also allow any Vercel domain
       if (process.env.NODE_ENV === 'production' && origin.includes('vercel.app')) {
         return callback(null, true);
       }
@@ -38,7 +47,8 @@ async function bootstrap() {
         return callback(null, true);
       }
       
-      // Reject other origins in production
+      // Log rejected origins in production for debugging
+      console.log('🚫 CORS rejected origin:', origin);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,

@@ -14,6 +14,15 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('🔍 Using Supabase Pooler URL for connection');
 if (process.env.SUPABASE_DB_URL) {
   console.log('🔍 Pooler URL:', process.env.SUPABASE_DB_URL.replace(/:[^:@]+@/, ':***@'));
+  // Parse the URL to show individual components
+  try {
+    const url = new URL(process.env.SUPABASE_DB_URL);
+    console.log('🔍 Host:', url.hostname);
+    console.log('🔍 Port:', url.port);
+    console.log('🔍 Database:', url.pathname.substring(1));
+  } catch (e) {
+    console.log('❌ Error parsing URL:', e.message);
+  }
 }
 
 @Module({

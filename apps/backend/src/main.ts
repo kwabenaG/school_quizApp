@@ -46,11 +46,10 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
   
-  // Use a fixed port for the application, ignore Railway's PORT env var
-  // Railway's PORT=5432 is for database, not our app
-  const port = 3001;
+  // Use Railway's PORT env var (8080) for the application
+  const port = process.env.PORT || 3001;
   console.log('🔍 Using port:', port);
-  console.log('🔍 Railway PORT env var (ignored):', process.env.PORT);
+  console.log('🔍 Railway PORT env var:', process.env.PORT);
   await app.listen(port);
   console.log(`🚀 School Quiz Backend running on port ${port}`);
   console.log(`🔗 Health check available at: http://localhost:${port}/health`);

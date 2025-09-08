@@ -86,7 +86,7 @@ export default function QuizInterface() {
       const result: QuizResult = {
         isCorrect,
         correctAnswer: quizData?.word.word || '',
-        sessionComplete: quizData?.session.currentWordIndex === quizData?.session.totalWords - 1
+        sessionComplete: quizData?.session.currentWordIndex === (quizData?.session.totalWords || 0) - 1
       };
       
       setLastResult(result);

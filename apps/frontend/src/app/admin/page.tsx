@@ -280,7 +280,7 @@ export default function AdminPage() {
                 <strong>CSV Format:</strong> Column 1: Word, Column 2: Clues (semicolon-separated), Column 3: Difficulty (optional)
               </p>
               <p className="text-sm text-blue-600">
-                Example: "ocean,A large body of water;Where fish live;Blue and vast,easy"
+                Example: &quot;ocean,A large body of water;Where fish live;Blue and vast,easy&quot;
               </p>
               <p className="text-xs text-blue-500 mt-1">
                 Note: Save your Excel file as CSV format before uploading
@@ -393,7 +393,7 @@ export default function AdminPage() {
                     />
                     <select
                       value={newWord.difficulty}
-                      onChange={(e) => setNewWord({...newWord, difficulty: e.target.value as any})}
+                      onChange={(e) => setNewWord({...newWord, difficulty: e.target.value as 'easy' | 'medium' | 'hard'})}
                       className="px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="easy">Easy</option>

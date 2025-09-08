@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -147,7 +147,7 @@ export default function QuizInterface() {
             </div>
             <CardTitle className="text-2xl text-green-600">Quiz Complete!</CardTitle>
             <CardDescription>
-              Great job, {contestantName}! You've finished the quiz.
+              Great job, {contestantName}! You&apos;ve finished the quiz.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">

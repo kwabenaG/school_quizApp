@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// Removed unused imports: Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription
 
 interface WordData {
   word: {
@@ -67,7 +66,7 @@ export default function QuizMasterPage() {
           const newTime = prev + 1;
           // Stop timer when time limit is reached, but don't auto-reveal
           if (newTime >= timeLimit) {
-            setMessage('Time\'s up! Click "Reveal Answer" to show the solution.');
+            setMessage('Time\'s up! Click &quot;Reveal Answer&quot; to show the solution.');
             setMessageType('info');
             stopClueRotation(); // Stop clue rotation when time is up
             // Stop the timer by setting wordReady back to true
@@ -202,15 +201,15 @@ export default function QuizMasterPage() {
     }, firstClueDelay);
     
     // Store the initial delay timeout so we can clear it if needed
-    setClueInterval(initialDelay as any);
+    setClueInterval(initialDelay as NodeJS.Timeout);
   };
 
   // Stop clue rotation
   const stopClueRotation = () => {
     if (clueInterval) {
       // Clear both setTimeout and setInterval
-      clearTimeout(clueInterval as any);
-      clearInterval(clueInterval as any);
+      clearTimeout(clueInterval as NodeJS.Timeout);
+      clearInterval(clueInterval as NodeJS.Timeout);
       setClueInterval(null);
     }
     setCluesVisible(false); // Hide clues when stopping
@@ -366,11 +365,11 @@ export default function QuizMasterPage() {
         
         setCluePosition(getRandomPosition());
         setWordReady(true); // Word is ready but timer not started
-        setMessage('Next word loaded! Click "Start Word" to begin timer.');
+        setMessage('Next word loaded! Click &quot;Start Word&quot; to begin timer.');
         setMessageType('success');
       } else if (response.status === 404) {
         // No more words available
-        setMessage('No more words available! All words have been used. Click "Reset Used Words" to start over.');
+        setMessage('No more words available! All words have been used. Click &quot;Reset Used Words&quot; to start over.');
         setMessageType('info');
         setCurrentWord(null);
       } else {
@@ -526,7 +525,7 @@ export default function QuizMasterPage() {
                 <div className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl xl:text-[10rem] font-bold bg-gradient-to-r from-gray-800 to-blue-800 bg-clip-text text-transparent tracking-wider drop-shadow-lg whitespace-nowrap text-center overflow-visible">
                   {showScrambledWord ? currentWord.scrambled : (
                     <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-500 font-normal">
-                      Click "Start Word Timer" to begin
+                      Click &quot;Start Word Timer&quot; to begin
                     </div>
                   )}
                 </div>
@@ -616,7 +615,7 @@ export default function QuizMasterPage() {
                 </div>
                 
                 <p className="text-3xl text-green-700 font-semibold mb-8">
-                  Great job! The word was "{currentWord.word.word}"
+                  Great job! The word was &quot;{currentWord.word.word}&quot;
                 </p>
                 
                 <div className="flex justify-center space-x-6">

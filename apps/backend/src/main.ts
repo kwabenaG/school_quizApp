@@ -13,7 +13,7 @@ async function bootstrap() {
   
   // Enable CORS for frontend communication
   const allowedOrigins = [
-    'http://localhost:3020', // Local development
+    'http://localhost:3020', // Local developments
     'http://localhost:3000', // Alternative local port
     process.env.FRONTEND_URL, // Production frontend URL
   ].filter(Boolean); // Remove undefined values

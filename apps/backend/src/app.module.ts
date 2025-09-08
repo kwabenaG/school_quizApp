@@ -13,7 +13,7 @@ import { WordsModule } from './words/words.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace('https://', '').replace('http://', '') : 'localhost',
+      host: 'db.kdwhvsrzcgujuqswmhbt.supabase.co',
       port: 5432,
       username: 'postgres',
       password: process.env.SUPABASE_DB_PASSWORD || 'password',
@@ -21,7 +21,7 @@ import { WordsModule } from './words/words.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync in development
       logging: process.env.NODE_ENV !== 'production',
-      ssl: process.env.SUPABASE_URL ? { rejectUnauthorized: false } : false,
+      ssl: { rejectUnauthorized: false },
     }),
     QuizModule,
     WordsModule,

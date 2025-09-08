@@ -1,15 +1,28 @@
 // API configuration for School Quiz Frontend
 const getBaseUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!envUrl) return 'http://localhost:3001';
+  
+  // Debug logging (remove in production)
+  console.log('🔍 NEXT_PUBLIC_API_URL:', envUrl);
+  
+  if (!envUrl) {
+    console.log('🔍 Using localhost fallback');
+    return 'http://localhost:3001';
+  }
+  
+  // Clean the URL - remove any leading/trailing slashes and spaces
+  const cleanUrl = envUrl.trim().replace(/^\/+|\/+$/g, '');
   
   // Ensure the URL has a protocol
-  if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
-    return envUrl;
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    console.log('🔍 Using URL with protocol:', cleanUrl);
+    return cleanUrl;
   }
   
   // Add https:// if no protocol is provided
-  return `https://${envUrl}`;
+  const finalUrl = `https://${cleanUrl}`;
+  console.log('🔍 Using URL with added protocol:', finalUrl);
+  return finalUrl;
 };
 
 export const API_CONFIG = {
@@ -31,5 +44,7 @@ export const API_CONFIG = {
 
 // Helper function to build full API URLs
 export const getApiUrl = (endpoint: string): string => {
-  return `${API_CONFIG.BASE_URL}${endpoint}`;
+  const fullUrl = `${API_CONFIG.BASE_URL}${endpoint}`;
+  console.log('🔍 getApiUrl:', { baseUrl: API_CONFIG.BASE_URL, endpoint, fullUrl });
+  return fullUrl;
 };

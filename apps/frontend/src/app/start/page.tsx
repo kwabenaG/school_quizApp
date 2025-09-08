@@ -71,7 +71,7 @@ export default function QuizStartPage() {
       setTimeSpent(0);
       setMessage(`Welcome ${studentName}! Let's start the quiz!`);
       setMessageType('success');
-    } catch (error) {
+    } catch {
       setMessage('Failed to start quiz. Please check your session ID.');
       setMessageType('error');
     } finally {
@@ -92,7 +92,7 @@ export default function QuizStartPage() {
       setTimeSpent(0);
       setMessage('Here\'s a word to practice with!');
       setMessageType('success');
-    } catch (error) {
+    } catch {
       setMessage('Failed to get random word. Please try again.');
       setMessageType('error');
     } finally {
@@ -133,7 +133,7 @@ export default function QuizStartPage() {
 
       setShowAnswer(true);
 
-    } catch (error) {
+    } catch {
       setMessage('Failed to submit answer. Please try again.');
       setMessageType('error');
     } finally {

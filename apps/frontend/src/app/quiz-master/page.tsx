@@ -28,8 +28,8 @@ interface QuizSession {
 }
 
 export default function QuizMasterPage() {
-  const [sessionName, setSessionName] = useState('');
-  const [totalWords, setTotalWords] = useState(10);
+  const [sessionName] = useState('');
+  const [totalWords] = useState(10);
   const [currentWord, setCurrentWord] = useState<WordData | null>(null);
   const [session, setSession] = useState<QuizSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,14 +51,14 @@ export default function QuizMasterPage() {
   const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
   const [usedWordIds, setUsedWordIds] = useState<string[]>([]); // Track used words
   const [showScrambledWord, setShowScrambledWord] = useState(false); // Control scrambled word visibility
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [audioRef] = useState<HTMLAudioElement | null>(null);
   const [beepInterval, setBeepInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Function to play timer start sound
   const playTimerStartSound = () => {
     try {
       // Create a simple beep sound using Web Audio API
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -83,7 +83,7 @@ export default function QuizMasterPage() {
   // Function to play continuous beeping while timer is running
   const playTimerBeep = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -105,7 +105,7 @@ export default function QuizMasterPage() {
   // Function to play timer up sound
   const playTimerUpSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -180,7 +180,7 @@ export default function QuizMasterPage() {
         setBeepInterval(null);
       }
     };
-  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused, beepInterval]);
 
   // Load a random word when page loads (only if time setup is complete)
   useEffect(() => {
@@ -349,78 +349,7 @@ export default function QuizMasterPage() {
     setCluesVisible(false); // Hide clues when stopping
   };
 
-  const createSession = async () => {
-    if (!sessionName.trim()) {
-      setMessage('Please enter a session name');
-      setMessageType('error');
-      return;
-    }
 
-    setIsLoading(true);
-    setMessage('');
-
-    try {
-      const response = await fetch(getApiUrl('/quiz/sessions'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: sessionName,
-          totalWords: totalWords
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create session');
-      }
-
-      const newSession = await response.json();
-      setSession(newSession);
-      setMessage(`Session &quot;${sessionName}&quot; created successfully!`);
-      setMessageType('success');
-    } catch (error) {
-      setMessage('Failed to create session. Please try again.');
-      setMessageType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const startSession = async () => {
-    if (!session) return;
-
-    setIsLoading(true);
-    setMessage('');
-
-    try {
-      const response = await fetch(getApiUrl(`/quiz/sessions/${session.id}/start`), {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to start session');
-      }
-
-      const startedSession = await response.json();
-      setSession(startedSession);
-
-      // Get first word
-      const wordResponse = await fetch(getApiUrl(`/quiz/sessions/${session.id}/current-word`));
-      const wordData = await wordResponse.json();
-      
-      setCurrentWord(wordData);
-      setGameStarted(true);
-      setTimeSpent(0);
-      setMessage('Session started! First word is ready.');
-      setMessageType('success');
-    } catch (error) {
-      setMessage('Failed to start session. Please try again.');
-      setMessageType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const startWordTimer = () => {
     if (currentWord && wordReady) {

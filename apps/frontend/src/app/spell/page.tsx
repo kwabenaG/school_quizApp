@@ -127,7 +127,7 @@ export default function SpellPage() {
   ]);
 
   const [selectedPack, setSelectedPack] = useState<EnvelopePack | null>(null);
-  const [isAnimating, setIsAnimating] = useState(true);
+  const [isAnimating] = useState(true);
   const [currentEnvelopeIndex, setCurrentEnvelopeIndex] = useState(0);
   const [showAllEnvelopes, setShowAllEnvelopes] = useState(false);
 
@@ -143,7 +143,7 @@ export default function SpellPage() {
         const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
         if (nonSelectedEnvelopes.length === 0) return prevIndex;
         
-        let currentIndex = (prevIndex + 1) % nonSelectedEnvelopes.length;
+        const currentIndex = (prevIndex + 1) % nonSelectedEnvelopes.length;
         
         // When we reach the last envelope, show all envelopes
         if (currentIndex === 0 && nonSelectedEnvelopes.length > 1) {

@@ -28,7 +28,7 @@ export default function AdminPage() {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newWord, setNewWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editWord, setEditWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
@@ -45,47 +45,12 @@ export default function AdminPage() {
         const data = await response.json();
         setWords(data);
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to load words');
       setMessageType('error');
     }
   };
 
-  const handleCsvUpload = async () => {
-    if (!csvFile) {
-      setMessage('Please select a CSV file');
-      setMessageType('error');
-      return;
-    }
-
-    setIsLoading(true);
-    const formData = new FormData();
-    formData.append('file', csvFile);
-
-    try {
-      const response = await fetch(getApiUrl('/words/import-csv'), {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
-        setMessage(result.message);
-        setMessageType('success');
-        loadWords(); // Reload words
-        setCsvFile(null);
-      } else {
-        setMessage(result.message || 'Failed to import CSV');
-        setMessageType('error');
-      }
-    } catch (error) {
-      setMessage('Failed to import CSV');
-      setMessageType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAddWord = async () => {
     if (!newWord.word || newWord.clues.length === 0 || newWord.clues.every(clue => !clue.trim())) {
@@ -112,7 +77,7 @@ export default function AdminPage() {
         setMessage('Failed to add word');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to add word');
       setMessageType('error');
     } finally {
@@ -146,7 +111,7 @@ export default function AdminPage() {
         setMessage('Failed to delete words');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to delete words');
       setMessageType('error');
     } finally {
@@ -182,7 +147,7 @@ export default function AdminPage() {
         setMessage(result.message || 'Failed to import Excel');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to import Excel');
       setMessageType('error');
     } finally {
@@ -211,7 +176,7 @@ export default function AdminPage() {
         setMessage('Failed to truncate database');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to truncate database');
       setMessageType('error');
     } finally {
@@ -261,7 +226,7 @@ export default function AdminPage() {
         setMessage('Failed to update word');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to update word');
       setMessageType('error');
     } finally {
@@ -288,7 +253,7 @@ export default function AdminPage() {
         setMessage('Failed to delete word');
         setMessageType('error');
       }
-    } catch (error) {
+    } catch {
       setMessage('Failed to delete word');
       setMessageType('error');
     } finally {

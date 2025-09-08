@@ -78,7 +78,7 @@ export default function QuizInterface() {
     if (!answer.trim() || isSubmitting) return;
     
     setIsSubmitting(true);
-    const timeSpent = timeStarted ? Math.round((Date.now() - timeStarted) / 1000) : 0;
+    // const timeSpent = timeStarted ? Math.round((Date.now() - timeStarted) / 1000) : 0;
     
     // Mock API call
     setTimeout(() => {

@@ -16,6 +16,7 @@ console.log('🔍 Host: db.kdwhvsrzcgujuqswmhbt.supabase.co');
 console.log('🔍 Port: 5432');
 console.log('🔍 Username: postgres');
 console.log('🔍 Database: postgres');
+console.log('🔍 Forcing IPv4 connection to avoid IPv6 issues');
 
 @Module({
   imports: [
@@ -36,6 +37,10 @@ console.log('🔍 Database: postgres');
       retryAttempts: 3,
       retryDelay: 3000,
       autoLoadEntities: true,
+      // Force IPv4 connection
+      extra: {
+        family: 4, // Force IPv4
+      },
     }),
     QuizModule,
     WordsModule,

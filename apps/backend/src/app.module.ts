@@ -20,21 +20,20 @@ import { WordsModule } from './words/words.module';
         console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
         console.log('NODE_ENV:', process.env.NODE_ENV);
         
+        // Use individual components instead of full URL to avoid encoding issues
+        if (process.env.SUPABASE_URL && process.env.SUPABASE_DB_PASSWORD) {
+          console.log('🔍 Using individual Supabase components');
+          const host = process.env.SUPABASE_URL.replace('https://', '').replace('http://', '');
+          const url = `postgresql://postgres:${process.env.SUPABASE_DB_PASSWORD}@${host}:5432/postgres`;
+          console.log('🔍 Constructed URL:', url.substring(0, 50) + '...');
+          return url;
+        }
+        
         const supabaseUrl = process.env.SUPABASE_DB_URL;
         if (supabaseUrl) {
-          console.log('🔍 Using SUPABASE_DB_URL');
-          console.log('🔍 URL value:', supabaseUrl.substring(0, 50) + '...'); // Show first 50 chars
-          
-          // Try to parse and reconstruct the URL to handle encoding issues
-          try {
-            const url = new URL(supabaseUrl);
-            const reconstructedUrl = `postgresql://${url.username}:${url.password}@${url.hostname}:${url.port}${url.pathname}`;
-            console.log('🔍 Reconstructed URL:', reconstructedUrl.substring(0, 50) + '...');
-            return reconstructedUrl;
-          } catch (error) {
-            console.log('🔍 URL parsing failed, using original:', error.message);
-            return supabaseUrl;
-          }
+          console.log('🔍 Using SUPABASE_DB_URL (fallback)');
+          console.log('🔍 URL value:', supabaseUrl.substring(0, 50) + '...');
+          return supabaseUrl;
         }
         
         if (process.env.SUPABASE_URL) {

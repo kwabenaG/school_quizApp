@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Upload, Plus, Edit } from 'lucide-react';
 import Link from 'next/link';
+import { getApiUrl } from '@/lib/config';
 
 interface Word {
   id: string;
@@ -37,7 +38,7 @@ export default function AdminPage() {
 
   const loadWords = async () => {
     try {
-      const response = await fetch('http://localhost:3001/words?activeOnly=false');
+      const response = await fetch(getApiUrl('/words?activeOnly=false'));
       if (response.ok) {
         const data = await response.json();
         setWords(data);
@@ -60,7 +61,7 @@ export default function AdminPage() {
     formData.append('file', csvFile);
 
     try {
-      const response = await fetch('http://localhost:3001/words/import-csv', {
+      const response = await fetch(getApiUrl('/words/import-csv'), {
         method: 'POST',
         body: formData,
       });
@@ -93,7 +94,7 @@ export default function AdminPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/words', {
+      const response = await fetch(getApiUrl('/words'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newWord),
@@ -126,7 +127,7 @@ export default function AdminPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/words/bulk-delete', {
+      const response = await fetch(getApiUrl('/words/bulk-delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selectedWords }),
@@ -163,7 +164,7 @@ export default function AdminPage() {
     formData.append('file', excelFile);
 
     try {
-      const response = await fetch('http://localhost:3001/words/import-excel', {
+      const response = await fetch(getApiUrl('/words/import-excel'), {
         method: 'POST',
         body: formData,
       });
@@ -194,7 +195,7 @@ export default function AdminPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/words/truncate', {
+      const response = await fetch(getApiUrl('/words/truncate'), {
         method: 'POST',
       });
 

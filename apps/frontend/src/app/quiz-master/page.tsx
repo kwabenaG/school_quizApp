@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getApiUrl } from '@/lib/config';
 // Removed unused imports: Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription
 
 interface WordData {
@@ -90,7 +91,7 @@ export default function QuizMasterPage() {
     const loadRandomWord = async () => {
       try {
         const excludeIdsParam = usedWordIds.length > 0 ? `?excludeIds=${usedWordIds.join(',')}` : '';
-        const response = await fetch(`http://localhost:3001/words/random/word${excludeIdsParam}`);
+        const response = await fetch(getApiUrl(`/words/random/word${excludeIdsParam}`));
         if (response.ok) {
           const wordData = await response.json();
           setCurrentWord(wordData);
@@ -226,7 +227,7 @@ export default function QuizMasterPage() {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:3001/quiz/sessions', {
+      const response = await fetch(getApiUrl('/quiz/sessions'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +261,7 @@ export default function QuizMasterPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`http://localhost:3001/quiz/sessions/${session.id}/start`, {
+      const response = await fetch(getApiUrl(`/quiz/sessions/${session.id}/start`), {
         method: 'POST',
       });
 
@@ -272,7 +273,7 @@ export default function QuizMasterPage() {
       setSession(startedSession);
 
       // Get first word
-      const wordResponse = await fetch(`http://localhost:3001/quiz/sessions/${session.id}/current-word`);
+      const wordResponse = await fetch(getApiUrl(`/quiz/sessions/${session.id}/current-word`));
       const wordData = await wordResponse.json();
       
       setCurrentWord(wordData);
@@ -327,7 +328,7 @@ export default function QuizMasterPage() {
 
       // Get random word excluding used words
       const excludeIdsParam = usedWordIds.length > 0 ? `?excludeIds=${usedWordIds.join(',')}` : '';
-      const response = await fetch(`http://localhost:3001/words/random/word${excludeIdsParam}`);
+      const response = await fetch(getApiUrl(`/words/random/word${excludeIdsParam}`));
       if (response.ok) {
         const wordData = await response.json();
         setCurrentWord(wordData);
@@ -401,7 +402,7 @@ export default function QuizMasterPage() {
     if (!currentWord) {
       const loadRandomWord = async () => {
         try {
-          const response = await fetch('http://localhost:3001/words/random/word');
+          const response = await fetch(getApiUrl('/words/random/word'));
           if (response.ok) {
             const wordData = await response.json();
             setCurrentWord(wordData);

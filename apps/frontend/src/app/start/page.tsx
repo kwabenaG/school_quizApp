@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getApiUrl } from '@/lib/config';
 
 interface WordData {
   word: {
@@ -58,7 +59,7 @@ export default function QuizStartPage() {
 
     try {
       // Get current word for the session
-      const response = await fetch(`http://localhost:3001/quiz/sessions/${sessionId}/current-word`);
+      const response = await fetch(getApiUrl(`/quiz/sessions/${sessionId}/current-word`));
       
       if (!response.ok) {
         throw new Error('Session not found or not active');
@@ -83,7 +84,7 @@ export default function QuizStartPage() {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:3001/words/random/word');
+      const response = await fetch(getApiUrl('/words/random/word'));
       const data = await response.json();
       
       setCurrentWord(data);
@@ -109,7 +110,7 @@ export default function QuizStartPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:3001/quiz/sessions/${sessionId}/submit-answer`, {
+      const response = await fetch(getApiUrl(`/quiz/sessions/${sessionId}/submit-answer`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,20 @@
 // API configuration for School Quiz Frontend
+const getBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return 'http://localhost:3001';
+  
+  // Ensure the URL has a protocol
+  if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
+    return envUrl;
+  }
+  
+  // Add https:// if no protocol is provided
+  return `https://${envUrl}`;
+};
+
 export const API_CONFIG = {
   // Use environment variable in production, fallback to localhost for development
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  BASE_URL: getBaseUrl(),
   
   // API endpoints
   ENDPOINTS: {

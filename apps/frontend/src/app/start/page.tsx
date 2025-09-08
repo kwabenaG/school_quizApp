@@ -10,7 +10,7 @@ interface WordData {
   word: {
     id: string;
     word: string;
-    clue: string;
+    clues: string[];
     difficulty: 'easy' | 'medium' | 'hard';
   };
   scrambled: string;
@@ -272,11 +272,15 @@ export default function QuizStartPage() {
             <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-3xl p-10 mb-8 border-4 border-blue-300 shadow-xl relative overflow-hidden">
               <div className="absolute top-2 right-2 text-4xl opacity-30">💡</div>
               <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-800 to-purple-800 bg-clip-text text-transparent mb-6">
-                Clue:
+                Clues:
               </h2>
-              <p className="text-3xl text-blue-800 font-semibold leading-relaxed">
-                {currentWord.word.clue}
-              </p>
+              <div className="text-3xl text-blue-800 font-semibold leading-relaxed space-y-2">
+                {currentWord.word.clues.map((clue, index) => (
+                  <p key={index}>
+                    {index + 1}. {clue}
+                  </p>
+                ))}
+              </div>
             </div>
 
             {/* Beautiful Answer Input */}

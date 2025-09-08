@@ -14,14 +14,15 @@ export class Word {
   @Column({ unique: true })
   word: string;
 
-  @Column()
-  clue: string;
+  @Column('text', { array: true })
+  clues: string[];
 
   @Column({
     type: 'enum',
     enum: DifficultyLevel,
     default: DifficultyLevel.MEDIUM,
   })
+
   difficulty: DifficultyLevel;
 
   @Column({ default: 0 })

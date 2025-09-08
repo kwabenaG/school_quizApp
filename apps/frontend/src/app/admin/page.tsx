@@ -12,7 +12,7 @@ import Link from 'next/link';
 interface Word {
   id: string;
   word: string;
-  clue: string;
+  clues: string[];
   difficulty: 'easy' | 'medium' | 'hard';
   isActive: boolean;
   timesUsed: number;
@@ -26,8 +26,9 @@ export default function AdminPage() {
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newWord, setNewWord] = useState({ word: '', clue: '', difficulty: 'medium' as const });
+  const [newWord, setNewWord] = useState({ word: '', clues: [''], difficulty: 'medium' as const });
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
 
   // Load words on component mount
   useEffect(() => {
@@ -84,8 +85,8 @@ export default function AdminPage() {
   };
 
   const handleAddWord = async () => {
-    if (!newWord.word || !newWord.clue) {
-      setMessage('Please fill in all fields');
+    if (!newWord.word || newWord.clues.length === 0 || newWord.clues.every(clue => !clue.trim())) {
+      setMessage('Please fill in word and at least one clue');
       setMessageType('error');
       return;
     }
@@ -101,7 +102,7 @@ export default function AdminPage() {
       if (response.ok) {
         setMessage('Word added successfully');
         setMessageType('success');
-        setNewWord({ word: '', clue: '', difficulty: 'medium' });
+        setNewWord({ word: '', clues: [''], difficulty: 'medium' });
         setShowAddForm(false);
         loadWords();
       } else {
@@ -144,6 +145,71 @@ export default function AdminPage() {
       }
     } catch (error) {
       setMessage('Failed to delete words');
+      setMessageType('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelFile) {
+      setMessage('Please select an Excel file');
+      setMessageType('error');
+      return;
+    }
+
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append('file', excelFile);
+
+    try {
+      const response = await fetch('http://localhost:3001/words/import-excel', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        setMessage(result.message);
+        setMessageType('success');
+        loadWords(); // Reload words
+        setExcelFile(null);
+      } else {
+        setMessage(result.message || 'Failed to import Excel');
+        setMessageType('error');
+      }
+    } catch (error) {
+      setMessage('Failed to import Excel');
+      setMessageType('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTruncateDatabase = async () => {
+    if (!confirm('⚠️ WARNING: This will delete ALL words and quiz data. This action cannot be undone. Are you sure?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/words/truncate', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        setMessage(result.message);
+        setMessageType('success');
+        loadWords(); // Reload words
+      } else {
+        setMessage('Failed to truncate database');
+        setMessageType('error');
+      }
+    } catch (error) {
+      setMessage('Failed to truncate database');
       setMessageType('error');
     } finally {
       setIsLoading(false);
@@ -211,10 +277,13 @@ export default function AdminPage() {
           <CardContent className="space-y-4">
             <div className="bg-blue-50 p-4 rounded-xl">
               <p className="text-sm text-blue-800 mb-2">
-                <strong>CSV Format:</strong> word, clue, difficulty (optional)
+                <strong>CSV Format:</strong> Column 1: Word, Column 2: Clues (semicolon-separated), Column 3: Difficulty (optional)
               </p>
               <p className="text-sm text-blue-600">
-                Example: "ocean,A large body of water,easy"
+                Example: "ocean,A large body of water;Where fish live;Blue and vast,easy"
+              </p>
+              <p className="text-xs text-blue-500 mt-1">
+                Note: Save your Excel file as CSV format before uploading
               </p>
             </div>
             <div className="flex space-x-4">
@@ -235,6 +304,71 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
+        {/* Excel Import Section */}
+        <Card className="mb-8 shadow-2xl">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center">
+              <Upload className="mr-2" />
+              Import Words from Excel
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-green-50 p-4 rounded-xl">
+              <p className="text-sm text-green-800 mb-2">
+                <strong>Excel Format:</strong> Column A: Word, Column B: Clues (semicolon-separated), Column C: Difficulty (optional)
+              </p>
+              <p className="text-sm text-green-600">
+                Example: ocean | A large body of water;Where fish live;Blue and vast | easy
+              </p>
+              <p className="text-xs text-green-500 mt-1">
+                Supports .xlsx and .xls files directly
+              </p>
+            </div>
+            <div className="flex space-x-4">
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleExcelUpload}
+                disabled={!excelFile || isLoading}
+                className="bg-gradient-to-r from-green-500 to-emerald-600"
+              >
+                {isLoading ? 'Importing...' : 'Import Excel'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Database Management Section */}
+        <Card className="mb-8 shadow-2xl border-red-200">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center text-red-600">
+              <Trash2 className="mr-2" />
+              Database Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-red-50 p-4 rounded-xl">
+              <p className="text-sm text-red-800 mb-2">
+                <strong>⚠️ DANGER ZONE:</strong> These actions will permanently delete data
+              </p>
+              <p className="text-sm text-red-600">
+                Truncate Database: Removes ALL words and quiz data. Use this before importing your own words.
+              </p>
+            </div>
+            <Button 
+              onClick={handleTruncateDatabase}
+              disabled={isLoading}
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+            >
+              {isLoading ? 'Processing...' : '🗑️ Truncate Database'}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Add Word Section */}
         <Card className="mb-8 shadow-2xl">
           <CardHeader>
@@ -250,26 +384,60 @@ export default function AdminPage() {
               </Button>
             ) : (
               <div className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Word"
-                    value={newWord.word}
-                    onChange={(e) => setNewWord({...newWord, word: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Clue"
-                    value={newWord.clue}
-                    onChange={(e) => setNewWord({...newWord, clue: e.target.value})}
-                  />
-                  <select
-                    value={newWord.difficulty}
-                    onChange={(e) => setNewWord({...newWord, difficulty: e.target.value as any})}
-                    className="px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Input
+                      placeholder="Word"
+                      value={newWord.word}
+                      onChange={(e) => setNewWord({...newWord, word: e.target.value})}
+                    />
+                    <select
+                      value={newWord.difficulty}
+                      onChange={(e) => setNewWord({...newWord, difficulty: e.target.value as any})}
+                      className="px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="easy">Easy</option>
+                      <option value="medium">Medium</option>
+                      <option value="hard">Hard</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Clues (one per line):</label>
+                    {newWord.clues.map((clue, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          placeholder={`Clue ${index + 1}`}
+                          value={clue}
+                          onChange={(e) => {
+                            const newClues = [...newWord.clues];
+                            newClues[index] = e.target.value;
+                            setNewWord({...newWord, clues: newClues});
+                          }}
+                        />
+                        {newWord.clues.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newClues = newWord.clues.filter((_, i) => i !== index);
+                              setNewWord({...newWord, clues: newClues});
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewWord({...newWord, clues: [...newWord.clues, '']})}
+                    >
+                      Add Another Clue
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex space-x-2">
                   <Button onClick={handleAddWord} disabled={isLoading}>
@@ -329,7 +497,13 @@ export default function AdminPage() {
                           <Badge variant="secondary">Inactive</Badge>
                         )}
                       </div>
-                      <p className="text-gray-600">{word.clue}</p>
+                      <div className="text-gray-600">
+                        {word.clues.map((clue, index) => (
+                          <p key={index} className="text-sm">
+                            {index + 1}. {clue}
+                          </p>
+                        ))}
+                      </div>
                       <p className="text-sm text-gray-500">
                         Used {word.timesUsed} times
                       </p>

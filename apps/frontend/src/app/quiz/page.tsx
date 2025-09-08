@@ -13,7 +13,7 @@ interface QuizData {
   word: {
     id: string;
     word: string;
-    clue: string;
+    clues: string[];
     difficulty: 'easy' | 'medium' | 'hard';
   };
   scrambled: string;
@@ -51,7 +51,7 @@ export default function QuizInterface() {
     word: {
       id: '1',
       word: 'ELEPHANT',
-      clue: 'A large animal with a trunk',
+      clues: ['A large animal with a trunk', 'Has a long nose', 'Lives in Africa and Asia'],
       difficulty: 'easy'
     },
     scrambled: 'HETNELPA',
@@ -101,7 +101,7 @@ export default function QuizInterface() {
             word: {
               id: '2',
               word: 'BUTTERFLY',
-              clue: 'A colorful insect that flies',
+              clues: ['A colorful insect that flies', 'Starts as a caterpillar', 'Has beautiful wings'],
               difficulty: 'medium'
             },
             scrambled: 'YFLETRUBT',
@@ -276,10 +276,14 @@ export default function QuizInterface() {
             </CardHeader>
             <CardContent className="text-center">
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Clue:</h3>
-                <p className="text-xl text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  {quizData?.word.clue}
-                </p>
+                <h3 className="text-lg font-semibold mb-2">Clues:</h3>
+                <div className="text-xl text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+                  {quizData?.word.clues.map((clue, index) => (
+                    <p key={index}>
+                      {index + 1}. {clue}
+                    </p>
+                  ))}
+                </div>
               </div>
               
               <div className="space-y-4">

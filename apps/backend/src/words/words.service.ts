@@ -2,16 +2,17 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Word, DifficultyLevel } from '../entities/word.entity';
+import * as XLSX from 'xlsx';
 
 export interface CreateWordDto {
   word: string;
-  clue: string;
+  clues: string[];
   difficulty?: DifficultyLevel;
 }
 
 export interface UpdateWordDto {
   word?: string;
-  clue?: string;
+  clues?: string[];
   difficulty?: DifficultyLevel;
   isActive?: boolean;
 }
@@ -116,15 +117,28 @@ export class WordsService {
 
       const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
       
-      if (columns.length < 2) {
-        errors.push(`Row ${i + 1}: Insufficient columns. Expected: word, clue, difficulty (optional)`);
+      if (columns.length < 1) {
+        errors.push(`Row ${i + 1}: Insufficient columns. Expected: word, clues (semicolon-separated), difficulty (optional)`);
         continue;
       }
 
-      const [word, clue, difficulty] = columns;
+      const [word, clueString, difficulty] = columns;
       
-      if (!word || !clue) {
-        errors.push(`Row ${i + 1}: Word and clue are required`);
+      if (!word) {
+        errors.push(`Row ${i + 1}: Word is required`);
+        continue;
+      }
+
+      if (!clueString) {
+        errors.push(`Row ${i + 1}: Clues are required`);
+        continue;
+      }
+
+      // Parse clues separated by semicolons
+      const clues = clueString.split(';').map(clue => clue.trim()).filter(clue => clue.length > 0);
+      
+      if (clues.length === 0) {
+        errors.push(`Row ${i + 1}: At least one clue is required`);
         continue;
       }
 
@@ -142,8 +156,8 @@ export class WordsService {
         // Create new word
         const newWord = this.wordsRepository.create({
           word: word.toLowerCase(),
-          clue: clue,
-          difficulty: difficulty?.toLowerCase() as DifficultyLevel || 'medium',
+          clues: clues,
+          difficulty: difficulty?.toLowerCase() as DifficultyLevel || DifficultyLevel.MEDIUM,
           isActive: true
         });
 
@@ -171,5 +185,108 @@ export class WordsService {
       .execute();
 
     return result.affected || 0;
+  }
+
+  async importFromExcel(fileBuffer: Buffer): Promise<{ message: string; imported: number; errors: string[] }> {
+    const errors: string[] = [];
+    let imported = 0;
+
+    try {
+      // Parse Excel file
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert to JSON
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      if (data.length < 2) {
+        errors.push('Excel file must have at least a header row and one data row');
+        return { message: 'Import failed', imported: 0, errors };
+      }
+
+      // Skip header row
+      const dataRows = data.slice(1) as any[][];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        if (!row || row.length === 0) continue;
+
+        const [word, clueString, difficulty] = row.map(cell => 
+          cell ? String(cell).trim() : ''
+        );
+        
+        if (!word) {
+          errors.push(`Row ${i + 2}: Word is required`);
+          continue;
+        }
+
+        if (!clueString) {
+          errors.push(`Row ${i + 2}: Clues are required`);
+          continue;
+        }
+
+        // Parse clues separated by semicolons
+        const clues = clueString.split(';').map(clue => clue.trim()).filter(clue => clue.length > 0);
+        
+        if (clues.length === 0) {
+          errors.push(`Row ${i + 2}: At least one clue is required`);
+          continue;
+        }
+
+        try {
+          // Check if word already exists
+          const existingWord = await this.wordsRepository.findOne({ 
+            where: { word: word.toLowerCase() } 
+          });
+
+          if (existingWord) {
+            errors.push(`Row ${i + 2}: Word "${word}" already exists`);
+            continue;
+          }
+
+          // Create new word
+          const newWord = this.wordsRepository.create({
+            word: word.toLowerCase(),
+            clues: clues,
+            difficulty: difficulty?.toLowerCase() as DifficultyLevel || DifficultyLevel.MEDIUM,
+            isActive: true
+          });
+
+          await this.wordsRepository.save(newWord);
+          imported++;
+        } catch (error) {
+          errors.push(`Row ${i + 2}: ${error.message}`);
+        }
+      }
+
+      return {
+        message: `Excel import completed. ${imported} words imported successfully.`,
+        imported,
+        errors
+      };
+    } catch (error) {
+      errors.push(`Failed to parse Excel file: ${error.message}`);
+      return {
+        message: 'Excel import failed',
+        imported: 0,
+        errors
+      };
+    }
+  }
+
+  async truncateDatabase(): Promise<{ message: string }> {
+    try {
+      // Clear all data in correct order (respecting foreign key constraints)
+      await this.wordsRepository.manager.query('TRUNCATE TABLE quiz_attempts CASCADE');
+      await this.wordsRepository.manager.query('TRUNCATE TABLE quiz_sessions CASCADE');
+      await this.wordsRepository.manager.query('TRUNCATE TABLE words CASCADE');
+      
+      return {
+        message: 'Database truncated successfully. All words and related data have been cleared.'
+      };
+    } catch (error) {
+      throw new Error(`Failed to truncate database: ${error.message}`);
+    }
   }
 }

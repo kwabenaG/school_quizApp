@@ -113,3 +113,6 @@ temp/
 # Local development
 .local
 node_modules
+
+# Documentation
+docs/

@@ -19,8 +19,11 @@ export default function Home() {
             <Link href="/quiz-master">
               <Button variant="outline">Quiz Master</Button>
             </Link>
-            <Link href="/start">
-              <Button>Practice Mode</Button>
+            <Link href="/spell">
+              <Button variant="outline">Spell Bound Challenge</Button>
+            </Link>
+            <Link href="/admin">
+              <Button className="bg-blue-800 text-white hover:bg-gray-800"  variant="secondary">Admin</Button>
             </Link>
           </div>
         </nav>
@@ -43,6 +46,11 @@ export default function Home() {
             <Link href="/quiz-master">
               <Button size="lg" className="w-full sm:w-auto">
                 🎯 Quiz Master Control
+              </Button>
+            </Link>
+            <Link href="/spell">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                ✉️ Spell Challenge
               </Button>
             </Link>
             <Link href="/start">

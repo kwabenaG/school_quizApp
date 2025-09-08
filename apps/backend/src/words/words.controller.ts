@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseInterceptors
 import { FileInterceptor } from '@nestjs/platform-express';
 import { WordsService, CreateWordDto, UpdateWordDto } from './words.service';
 import { Word } from '../entities/word.entity';
+import { Express } from 'express';
 
 @Controller('words')
 export class WordsController {
@@ -60,5 +61,21 @@ export class WordsController {
   async bulkDelete(@Body() body: { ids: string[] }): Promise<{ message: string; deleted: number }> {
     const deleted = await this.wordsService.bulkDelete(body.ids);
     return { message: `${deleted} words deleted successfully`, deleted };
+  }
+
+  @Post('import-excel')
+  @UseInterceptors(FileInterceptor('file'))
+  async importExcel(@UploadedFile() file: Express.Multer.File): Promise<{ message: string; imported: number; errors: string[] }> {
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+
+    const result = await this.wordsService.importFromExcel(file.buffer);
+    return result;
+  }
+
+  @Post('truncate')
+  async truncateDatabase(): Promise<{ message: string }> {
+    return await this.wordsService.truncateDatabase();
   }
 }

@@ -243,7 +243,7 @@ export default function QuizMasterPage() {
 
       const newSession = await response.json();
       setSession(newSession);
-      setMessage(`Session "${sessionName}" created successfully!`);
+      setMessage(`Session &quot;${sessionName}&quot; created successfully!`);
       setMessageType('success');
     } catch (error) {
       setMessage('Failed to create session. Please try again.');
@@ -813,7 +813,7 @@ export default function QuizMasterPage() {
               <div className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl xl:text-[10rem] font-bold bg-gradient-to-r from-gray-800 to-blue-800 bg-clip-text text-transparent tracking-wider drop-shadow-lg whitespace-nowrap text-center overflow-visible">
                 {currentWord ? (showScrambledWord ? currentWord.scrambled : (
                   <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-gray-500 font-normal">
-                    Click "Start Word Timer" to begin
+                    Click &quot;Start Word Timer&quot; to begin
                   </div>
                 )) : 'Loading...'}
               </div>
@@ -890,7 +890,7 @@ export default function QuizMasterPage() {
               </div>
               
               <p className="text-3xl text-green-700 font-semibold mb-8">
-                Great job! The word was "{currentWord.word.word}"
+                Great job! The word was &quot;{currentWord.word.word}&quot;
               </p>
               
               <div className="flex justify-center space-x-6">

@@ -239,7 +239,7 @@ export default function QuizInterface() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary">Word {quizData?.session.currentWordIndex + 1} of {quizData?.session.totalWords}</Badge>
+              <Badge variant="secondary">Word {(quizData?.session.currentWordIndex || 0) + 1} of {quizData?.session.totalWords || 0}</Badge>
               <Link href="/">
                 <Button variant="outline" size="sm">Exit Quiz</Button>
               </Link>

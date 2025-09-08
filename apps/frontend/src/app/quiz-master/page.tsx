@@ -131,6 +131,42 @@ export default function QuizMasterPage() {
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    
+    // Define functions inside useEffect to avoid dependency issues
+    const startClueRotation = () => {
+      if (!currentWord || currentWord.word.clues.length <= 1) {
+        return;
+      }
+      
+      const firstClueDelay = getFirstClueDelay();
+      const rotationInterval = getClueRotationInterval();
+      
+      // Set initial delay before first clue appears
+      const initialDelay = setTimeout(() => {
+        setCluesVisible(true); // Show clues after delay
+        
+        // Start rotating clues
+        const clueInterval = setInterval(() => {
+          setCurrentClueIndex(prev => (prev + 1) % currentWord.word.clues.length);
+          setCluePosition({
+            x: Math.random() * (window.innerWidth - 320),
+            y: Math.random() * (window.innerHeight - 200)
+          });
+        }, rotationInterval);
+        
+        setClueInterval(clueInterval);
+      }, firstClueDelay);
+    };
+
+    const stopClueRotation = () => {
+      if (clueInterval) {
+        // Clear both setTimeout and setInterval
+        clearTimeout(clueInterval as NodeJS.Timeout);
+        clearInterval(clueInterval as NodeJS.Timeout);
+        setClueInterval(null);
+      }
+    };
+    
     if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
       // Start clue rotation with delay - don't set position immediately
       startClueRotation(); // This will handle the delay before first clue appears
@@ -174,13 +210,25 @@ export default function QuizMasterPage() {
     return () => {
       clearInterval(interval);
       stopClueRotation();
-      // Clean up beep interval
+    };
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
+
+  // Separate effect to handle hiding clues when timer stops
+  useEffect(() => {
+    if (!timerStarted || timerPaused) {
+      setCluesVisible(false);
+    }
+  }, [timerStarted, timerPaused]);
+
+  // Separate effect to handle beep interval cleanup
+  useEffect(() => {
+    return () => {
       if (beepInterval) {
         clearInterval(beepInterval);
         setBeepInterval(null);
       }
     };
-  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused, beepInterval]);
+  }, [beepInterval]);
 
   // Load a random word when page loads (only if time setup is complete)
   useEffect(() => {
@@ -280,74 +328,6 @@ export default function QuizMasterPage() {
     return delay;
   };
 
-  // Start clue rotation with delay before first clue
-  const startClueRotation = () => {
-    if (!currentWord || currentWord.word.clues.length <= 1) {
-      return;
-    }
-    
-    const firstClueDelay = getFirstClueDelay();
-    const rotationInterval = getClueRotationInterval();
-    
-    // Set initial delay before first clue appears
-    const initialDelay = setTimeout(() => {
-      setCluesVisible(true); // Show clues after delay
-      // Set the first clue position immediately when delay is over
-      const getRandomPosition = () => {
-        // Focus on the far right side area where there's lots of space
-        const rightSideAreas = [
-          { x: 80, y: 15 },   // Top-right area (safe from top edge)
-          { x: 85, y: 35 },   // Middle-right area
-          { x: 90, y: 55 },   // Lower-right area
-          { x: 75, y: 75 },   // Bottom-right area (safe from bottom edge)
-          { x: 88, y: 25 },   // Far right area
-          { x: 82, y: 45 }    // Center-right area
-        ];
-        
-        // Randomly select one of the right side areas
-        const selectedArea = rightSideAreas[Math.floor(Math.random() * rightSideAreas.length)];
-        
-        // Add some randomness within the area (smaller variation to stay in viewport)
-        const x = selectedArea.x + (Math.random() - 0.5) * 6; // ±3% variation
-        const y = selectedArea.y + (Math.random() - 0.5) * 10; // ±5% variation
-        
-        // Ensure we stay within viewport bounds with additional safety margins
-        const finalX = Math.max(75, Math.min(92, x)); // Keep in right 25% of screen, away from edges
-        const finalY = Math.max(20, Math.min(80, y)); // Keep away from top/bottom edges with more margin
-        
-        return { x: finalX, y: finalY };
-      };
-      
-      // Set first clue position
-      setCluePosition(getRandomPosition());
-      
-      // Start the clue rotation after the delay
-      const clueInterval = setInterval(() => {
-        setCurrentClueIndex(prev => {
-          const nextIndex = (prev + 1) % currentWord.word.clues.length;
-          // Generate new position for each clue
-          setCluePosition(getRandomPosition());
-          return nextIndex;
-        });
-      }, rotationInterval);
-      
-      setClueInterval(clueInterval);
-    }, firstClueDelay);
-    
-    // Store the initial delay timeout so we can clear it if needed
-    setClueInterval(initialDelay as NodeJS.Timeout);
-  };
-
-  // Stop clue rotation
-  const stopClueRotation = () => {
-    if (clueInterval) {
-      // Clear both setTimeout and setInterval
-      clearTimeout(clueInterval as NodeJS.Timeout);
-      clearInterval(clueInterval as NodeJS.Timeout);
-      setClueInterval(null);
-    }
-    setCluesVisible(false); // Hide clues when stopping
-  };
 
 
 

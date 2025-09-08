@@ -24,7 +24,7 @@ if (process.env.SUPABASE_DB_URL) {
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.SUPABASE_DB_URL,
+      url: process.env.SUPABASE_DB_URL || `postgresql://postgres:${process.env.SUPABASE_DB_PASSWORD}@db.kdwhvsrzcgujuqswmhbt.supabase.co:5432/postgres`,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync in development
       logging: process.env.NODE_ENV !== 'production',

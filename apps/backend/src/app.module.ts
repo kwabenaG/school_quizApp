@@ -23,6 +23,7 @@ import { WordsModule } from './words/words.module';
         const supabaseUrl = process.env.SUPABASE_DB_URL;
         if (supabaseUrl) {
           console.log('🔍 Using SUPABASE_DB_URL');
+          console.log('🔍 URL value:', supabaseUrl.substring(0, 50) + '...'); // Show first 50 chars
           return supabaseUrl;
         }
         

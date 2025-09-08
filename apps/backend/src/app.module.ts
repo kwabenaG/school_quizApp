@@ -24,7 +24,17 @@ import { WordsModule } from './words/words.module';
         if (supabaseUrl) {
           console.log('🔍 Using SUPABASE_DB_URL');
           console.log('🔍 URL value:', supabaseUrl.substring(0, 50) + '...'); // Show first 50 chars
-          return supabaseUrl;
+          
+          // Try to parse and reconstruct the URL to handle encoding issues
+          try {
+            const url = new URL(supabaseUrl);
+            const reconstructedUrl = `postgresql://${url.username}:${url.password}@${url.hostname}:${url.port}${url.pathname}`;
+            console.log('🔍 Reconstructed URL:', reconstructedUrl.substring(0, 50) + '...');
+            return reconstructedUrl;
+          } catch (error) {
+            console.log('🔍 URL parsing failed, using original:', error.message);
+            return supabaseUrl;
+          }
         }
         
         if (process.env.SUPABASE_URL) {

@@ -4,18 +4,10 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend.railway.app/api/$1"
+      "destination": "https://schoolquizapp-production.up.railway.app"
     }
-  ],
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-    }
-  }
+  ]
 }

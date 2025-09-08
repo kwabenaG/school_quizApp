@@ -253,7 +253,7 @@ export default function QuizInterface() {
         <div className="mb-8">
           <div className="flex justify-between text-sm mb-2">
             <span>Progress</span>
-            <span>{quizData?.session.currentWordIndex + 1} / {quizData?.session.totalWords}</span>
+            <span>{(quizData?.session.currentWordIndex || 0) + 1} / {quizData?.session.totalWords || 0}</span>
           </div>
           <Progress value={((quizData?.session.currentWordIndex || 0) + 1) / (quizData?.session.totalWords || 1) * 100} className="h-3" />
         </div>

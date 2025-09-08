@@ -1,0 +1,8 @@
+# Railway ignore file - exclude frontend and docs from backend deployment
+apps/frontend/
+docs/
+node_modules/
+*.md
+.git/
+.gitignore
+package-lock.json

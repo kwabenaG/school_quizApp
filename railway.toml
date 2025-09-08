@@ -1,0 +1,13 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "cd apps/backend && npm run start:prod"
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[build.watchPaths]
+include = ["apps/backend/**"]
+exclude = ["apps/frontend/**", "docs/**", "node_modules/**"]

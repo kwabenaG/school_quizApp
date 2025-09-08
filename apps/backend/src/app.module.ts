@@ -6,6 +6,11 @@ import { AppService } from './app.service';
 import { QuizModule } from './quiz/quiz.module';
 import { WordsModule } from './words/words.module';
 
+// Debug logging
+console.log('🔍 Environment variables:');
+console.log('SUPABASE_DB_PASSWORD:', process.env.SUPABASE_DB_PASSWORD ? 'SET' : 'NOT SET');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -22,6 +27,9 @@ import { WordsModule } from './words/words.module';
       synchronize: process.env.NODE_ENV !== 'production', // Auto-sync in development
       logging: process.env.NODE_ENV !== 'production',
       ssl: { rejectUnauthorized: false },
+      retryAttempts: 3,
+      retryDelay: 3000,
+      autoLoadEntities: true,
     }),
     QuizModule,
     WordsModule,

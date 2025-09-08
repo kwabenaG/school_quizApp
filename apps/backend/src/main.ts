@@ -2,7 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  try {
+    console.log('🚀 Starting School Quiz Backend...');
+    console.log('🔍 Environment:', process.env.NODE_ENV);
+    console.log('🔍 Port:', process.env.PORT || 3001);
+    
+    const app = await NestFactory.create(AppModule);
+    console.log('✅ App module created successfully');
   
   // Enable CORS for frontend communication
   const allowedOrigins = [
@@ -42,6 +48,14 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`🚀 School Quiz Backend running on port ${port}`);
+  console.log(`🔗 Health check available at: http://localhost:${port}/health`);
+  } catch (error) {
+    console.error('❌ Failed to start application:', error);
+    process.exit(1);
+  }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('❌ Bootstrap failed:', error);
+  process.exit(1);
+});

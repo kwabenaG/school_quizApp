@@ -26,7 +26,7 @@ export default function AdminPage() {
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newWord, setNewWord] = useState({ word: '', clues: [''], difficulty: 'medium' as const });
+  const [newWord, setNewWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
 

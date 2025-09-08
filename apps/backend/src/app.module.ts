@@ -15,9 +15,10 @@ import { WordsModule } from './words/words.module';
       type: 'postgres',
       url: (() => {
         // Debug logging
-        console.log('🔍 Environment variables:');
+        console.log('🔍 Environment variables (v2):');
         console.log('SUPABASE_DB_URL:', process.env.SUPABASE_DB_URL ? 'SET' : 'NOT SET');
         console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+        console.log('SUPABASE_DB_PASSWORD:', process.env.SUPABASE_DB_PASSWORD ? 'SET' : 'NOT SET');
         console.log('NODE_ENV:', process.env.NODE_ENV);
         
         // Use individual components instead of full URL to avoid encoding issues

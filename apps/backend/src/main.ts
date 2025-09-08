@@ -5,7 +5,8 @@ async function bootstrap() {
   try {
     console.log('🚀 Starting School Quiz Backend...');
     console.log('🔍 Environment:', process.env.NODE_ENV);
-    console.log('🔍 Port:', process.env.PORT || 3001);
+    console.log('🔍 PORT env var:', process.env.PORT);
+    console.log('🔍 Default port:', 3001);
     
     const app = await NestFactory.create(AppModule);
     console.log('✅ App module created successfully');
@@ -46,6 +47,7 @@ async function bootstrap() {
   });
   
   const port = process.env.PORT || 3001;
+  console.log('🔍 Using port:', port);
   await app.listen(port);
   console.log(`🚀 School Quiz Backend running on port ${port}`);
   console.log(`🔗 Health check available at: http://localhost:${port}/health`);

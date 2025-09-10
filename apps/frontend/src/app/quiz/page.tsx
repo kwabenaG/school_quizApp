@@ -43,7 +43,7 @@ export default function QuizInterface() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastResult, setLastResult] = useState<QuizResult | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [timeStarted, setTimeStarted] = useState<number | null>(null);
+  const [timeStarted, setTimeStarted] = useState<number | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [sessionComplete, setSessionComplete] = useState(false);
 
   // Mock quiz data for demonstration

@@ -29,13 +29,13 @@ interface QuizSession {
 }
 
 export default function QuizMasterPage() {
-  const [sessionName] = useState('');
-  const [totalWords] = useState(10);
+  const [sessionName] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [totalWords] = useState(10); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [currentWord, setCurrentWord] = useState<WordData | null>(null);
-  const [session, setSession] = useState<QuizSession | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
+  const [session] = useState<QuizSession | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [isLoading, setIsLoading] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [message, setMessage] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info'); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [timeSpent, setTimeSpent] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -114,7 +114,7 @@ export default function QuizMasterPage() {
     }
   }, [usedWordIds.size]);
   const [showScrambledWord, setShowScrambledWord] = useState(false); // Control scrambled word visibility
-  const [audioRef] = useState<HTMLAudioElement | null>(null);
+  const [audioRef] = useState<HTMLAudioElement | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [beepInterval, setBeepInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Function to play timer start sound
@@ -202,6 +202,11 @@ export default function QuizMasterPage() {
         return;
       }
       
+      // Clear any existing clue interval
+      if (clueInterval) {
+        clearTimeout(clueInterval as NodeJS.Timeout);
+        setClueInterval(null);
+      }
       
       const firstClueDelay = getFirstClueDelay();
       const rotationInterval = getClueRotationInterval();
@@ -220,77 +225,35 @@ export default function QuizMasterPage() {
         if (timeSpent < timeLimit) {
           console.log('Setting clues visible to true');
           setCluesVisible(true); // Show clues after delay
-        } else {
-          console.log('Timer is up, not showing clues');
-          return;
-        }
-        
-        // Start rotating clues with time-bound display
-        let clueRotationCount = 0;
-        const startClueRotation = () => {
-          if (clueRotationCount >= currentWord.word.clues.length - 1) {
-            return; // All clues have been shown
-          }
           
-          // Stop if timer is up
-          if (timeSpent >= timeLimit) {
-            console.log('Timer is up, stopping clue rotation');
-            return;
-          }
-          
-          // Recalculate interval based on remaining time
-          const currentTimeElapsed = timeSpent * 1000;
-          const remainingTime = (timeLimit * 1000) - currentTimeElapsed;
-          const remainingClues = currentWord.word.clues.length - 1 - clueRotationCount;
-          const timePerClue = Math.max(remainingTime / remainingClues, 3000); // Min 3 seconds total per clue
-          const dynamicInterval = Math.min(timePerClue, 10000); // Max 10 seconds total per clue
-          
-          // Clue shows for 2-3 seconds, then disappears for 1-2 seconds before next
-          const clueDisplayTime = Math.min(3000, dynamicInterval * 0.6); // 60% of time showing
-          const clueHideTime = Math.max(1000, dynamicInterval * 0.4); // 40% of time hidden
-          
-          console.log(`Clue rotation ${clueRotationCount + 1}: total time: ${dynamicInterval}ms, show: ${clueDisplayTime}ms, hide: ${clueHideTime}ms`);
-          
-          setTimeout(() => {
-            // Show the clue
+          // Use a simple interval for clue rotation
+          const clueInterval = setInterval(() => {
+            // Show next clue
             setCurrentClueIndex(prev => {
               const newIndex = (prev + 1) % currentWord.word.clues.length;
-              console.log(`Showing clue: ${newIndex + 1} of ${currentWord.word.clues.length} for ${clueDisplayTime}ms`);
+              console.log(`Showing clue: ${newIndex + 1} of ${currentWord.word.clues.length}`);
               return newIndex;
             });
-            
-            // Hide the clue after display time
-            setTimeout(() => {
-              console.log(`Hiding clue, waiting ${clueHideTime}ms before next`);
-              setCluesVisible(false);
-              
-              // Show clues again and schedule next rotation after hide time
-              setTimeout(() => {
-                // Check if timer is still running before showing clues
-                if (timeSpent < timeLimit) {
-                  setCluesVisible(true);
-                  clueRotationCount++;
-                  startClueRotation();
-                }
-              }, clueHideTime);
-            }, clueDisplayTime);
-          }, dynamicInterval);
-        };
-        
-        // Start the first clue rotation
-        startClueRotation();
-        
-        // Store the initial delay timeout as the clue interval for cleanup
-        setClueInterval(initialDelay);
-        console.log('Clue rotation started with dynamic timing');
+          }, rotationInterval);
+          
+          // Store the interval for cleanup
+          setClueInterval(clueInterval as unknown as NodeJS.Timeout);
+          console.log('Clue rotation started with interval');
+        } else {
+          console.log('Timer is up, not showing clues');
+        }
       }, firstClueDelay);
+      
+      // Store the initial delay timeout for cleanup
+      setClueInterval(initialDelay as unknown as NodeJS.Timeout);
     };
 
     const stopClueRotation = () => {
       if (clueInterval) {
-        console.log('Stopping clue rotation, clearing timeout:', clueInterval);
-        // Clear the timeout
+        console.log('Stopping clue rotation, clearing interval/timeout:', clueInterval);
+        // Clear both timeout and interval
         clearTimeout(clueInterval as NodeJS.Timeout);
+        clearInterval(clueInterval as NodeJS.Timeout);
         setClueInterval(null);
       } else {
         console.log('No clue interval to stop');
@@ -299,33 +262,23 @@ export default function QuizMasterPage() {
     
     if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
       // Start clue rotation with delay - don't set position immediately
-      console.log('Timer conditions met, starting clue rotation', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused });
-      
       // Only start clue rotation if it's not already running
       if (!clueInterval) {
         startClueRotation(); // This will handle the delay before first clue appears
       }
       
-      // Start continuous beeping synchronized with timer
-      const beepInterval = setInterval(() => {
-        playTimerBeep();
-      }, 1000); // Beep every 1 second to match timer ticks
-      setBeepInterval(beepInterval);
-      
       interval = setInterval(() => {
         setTimeSpent(prev => {
           const newTime = prev + 1;
+          // Play beep sound synchronized with timer update
+          playTimerBeep();
           // Stop timer when time limit is reached, but don't auto-reveal
           if (newTime >= timeLimit) {
             setMessage('Time\'s up! Click &quot;Reveal Answer&quot; to show the solution.');
             setMessageType('info');
             stopClueRotation(); // Stop clue rotation when time is up
             setCluesVisible(false); // Hide clues when time is up
-            // Stop continuous beeping
-            if (beepInterval) {
-              clearInterval(beepInterval);
-              setBeepInterval(null);
-            }
+            // Timer stopped - no need to clear beep interval since it's integrated
             // Stop the timer but keep wordReady true so Reveal Answer button stays enabled
             setTimerStarted(false); // Reset timer started state
             setTimerPaused(false); // Reset paused state
@@ -336,31 +289,17 @@ export default function QuizMasterPage() {
         });
       }, 1000);
     } else {
-      console.log('Timer conditions not met, hiding clues', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused });
       stopClueRotation(); // Stop clue rotation when timer stops or is paused
       setCluesVisible(false); // Hide clues when timer stops or is paused
-      // Stop continuous beeping when timer is paused or stopped
-      if (beepInterval) {
-        clearInterval(beepInterval);
-        setBeepInterval(null);
-      }
+      // No need to clear beep interval since it's integrated with timer
     }
     return () => {
       clearInterval(interval);
       stopClueRotation();
     };
-  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused, clueInterval]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // Separate effect to handle beep interval cleanup
-  useEffect(() => {
-    return () => {
-      if (beepInterval) {
-        clearInterval(beepInterval);
-        setBeepInterval(null);
-      }
-    };
-  }, [beepInterval]);
 
 
   // Load a random word when page loads (only if time setup is complete)

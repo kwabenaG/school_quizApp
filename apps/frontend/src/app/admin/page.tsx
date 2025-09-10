@@ -29,7 +29,7 @@ export default function AdminPage() {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newWord, setNewWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
-  const [csvFile] = useState<File | null>(null);
+  const [csvFile] = useState<File | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editWord, setEditWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });

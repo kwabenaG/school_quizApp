@@ -22,7 +22,7 @@ const loadUsedWords = (): void => {
   try {
     const savedUsedWords = localStorage.getItem(QUIZ_USED_WORDS_KEY);
     if (savedUsedWords) {
-      const wordIds = JSON.parse(savedUsedWords).filter(id => id && id.trim());
+      const wordIds = JSON.parse(savedUsedWords).filter((id: string) => id && id.trim());
       usedWords = new Set(wordIds);
       console.log('🔍 Loaded used words from localStorage:', Array.from(usedWords));
     }

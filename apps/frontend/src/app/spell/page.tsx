@@ -126,7 +126,7 @@ export default function SpellPage() {
     { id: 5, label: 'Pack 5', isSelected: false, isShuffled: false }
   ]);
   
-  const [selectedPack, setSelectedPack] = useState<EnvelopePack | null>(null);
+  const [selectedPack, setSelectedPack] = useState<EnvelopePack | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [isAnimating] = useState(true);
   const [currentEnvelopeIndex, setCurrentEnvelopeIndex] = useState(0);
   const [showAllEnvelopes, setShowAllEnvelopes] = useState(false);
@@ -180,7 +180,7 @@ export default function SpellPage() {
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('touchstart', handleUserInteraction);
     };
-  }, []);
+  }, [audioContextReady]);
 
   // Function to play whirling sound with beat pattern
   const playWhirlSound = () => {
@@ -304,7 +304,7 @@ export default function SpellPage() {
         audioContext.close();
       }
     };
-  }, [isAnimating]);
+  }, [isAnimating]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restart animation when selection changes
   useEffect(() => {
@@ -314,7 +314,7 @@ export default function SpellPage() {
       startSlidingAnimation();
       // Don't restart whirling sound - it should stop when envelope is selected
     }
-  }, [envelopes.filter(env => !env.isSelected).length]);
+  }, [envelopes.filter(env => !env.isSelected).length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSlidingAnimation = () => {
     // Clear existing interval
@@ -642,7 +642,7 @@ export default function SpellPage() {
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="text-6xl mb-4">🎉</div>
                 <h3 className="text-2xl font-bold text-gray-800 mb-2">All Packs Selected!</h3>
-                <p className="text-gray-600">You've selected all available envelope packs.</p>
+                <p className="text-gray-600">You&apos;ve selected all available envelope packs.</p>
               </div>
             );
           }

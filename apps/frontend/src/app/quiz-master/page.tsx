@@ -198,7 +198,8 @@ export default function QuizMasterPage() {
     
     // Define functions inside useEffect to avoid dependency issues
     const startClueRotation = () => {
-      if (!currentWord || currentWord.word.clues.length <= 1) {
+      if (!currentWord || !currentWord.word.clues || currentWord.word.clues.length === 0) {
+        console.log('No clues available for rotation');
         return;
       }
       
@@ -209,36 +210,63 @@ export default function QuizMasterPage() {
       }
       
       const firstClueDelay = getFirstClueDelay();
-      const rotationInterval = getClueRotationInterval();
+      const totalClues = currentWord.word.clues.length;
+      const remainingTime = (timeLimit * 1000) - (timeSpent * 1000) - firstClueDelay;
       
       console.log('Clue timing:', {
-        totalClues: currentWord.word.clues.length,
+        totalClues: totalClues,
+        clues: currentWord.word.clues,
         timeLimit: timeLimit,
         firstClueDelay: firstClueDelay,
         timeSpent: timeSpent,
-        remainingTime: (timeLimit * 1000) - (timeSpent * 1000) - firstClueDelay
+        remainingTime: remainingTime
       });
       
       // Set initial delay before first clue appears
       const initialDelay = setTimeout(() => {
         // Only show clues if timer is still running
         if (timeSpent < timeLimit) {
-          console.log('Setting clues visible to true');
-          setCluesVisible(true); // Show clues after delay
+          console.log('Starting clue sequence');
+          setCluesVisible(true);
+          setCurrentClueIndex(0); // Start with first clue
           
-          // Use a simple interval for clue rotation
-          const clueInterval = setInterval(() => {
-            // Show next clue
-            setCurrentClueIndex(prev => {
-              const newIndex = (prev + 1) % currentWord.word.clues.length;
-              console.log(`Showing clue: ${newIndex + 1} of ${currentWord.word.clues.length}`);
-              return newIndex;
-            });
-          }, rotationInterval);
+          // Calculate timing for each clue
+          const clueDisplayTime = 3000; // Each clue shows for 3 seconds
+          const timeBetweenClues = Math.max(1000, (remainingTime - (totalClues * clueDisplayTime)) / (totalClues - 1));
           
-          // Store the interval for cleanup
-          setClueInterval(clueInterval as unknown as NodeJS.Timeout);
-          console.log('Clue rotation started with interval');
+          console.log('Clue timing details:', {
+            clueDisplayTime,
+            timeBetweenClues,
+            totalTimeNeeded: (totalClues * clueDisplayTime) + ((totalClues - 1) * timeBetweenClues)
+          });
+          
+          let currentClue = 0;
+          
+          const showNextClue = () => {
+            if (currentClue < totalClues && timeSpent < timeLimit) {
+              console.log(`Showing clue ${currentClue + 1} of ${totalClues}`);
+              setCurrentClueIndex(currentClue);
+              
+              // Hide clue after display time
+              setTimeout(() => {
+                if (timeSpent < timeLimit) {
+                  console.log(`Hiding clue ${currentClue + 1}`);
+                  setCluesVisible(false);
+                  
+                  // Show next clue after delay
+                  if (currentClue < totalClues - 1) {
+                    setTimeout(() => {
+                      currentClue++;
+                      setCluesVisible(true);
+                      showNextClue();
+                    }, timeBetweenClues);
+                  }
+                }
+              }, clueDisplayTime);
+            }
+          };
+          
+          showNextClue();
         } else {
           console.log('Timer is up, not showing clues');
         }
@@ -261,10 +289,22 @@ export default function QuizMasterPage() {
     };
     
     if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
+      console.log('Timer conditions met, checking clue rotation', { 
+        gameStarted, 
+        currentWord: !!currentWord, 
+        showAnswer, 
+        timerStarted, 
+        timerPaused,
+        clueInterval: !!clueInterval,
+        totalClues: currentWord?.word?.clues?.length || 0
+      });
       // Start clue rotation with delay - don't set position immediately
       // Only start clue rotation if it's not already running
       if (!clueInterval) {
+        console.log('Starting clue rotation');
         startClueRotation(); // This will handle the delay before first clue appears
+      } else {
+        console.log('Clue rotation already running');
       }
       
       interval = setInterval(() => {
@@ -297,7 +337,7 @@ export default function QuizMasterPage() {
       clearInterval(interval);
       stopClueRotation();
     };
-  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused, clueInterval]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -412,25 +452,19 @@ export default function QuizMasterPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate clue rotation timing - distribute remaining clues across remaining time
+  // Calculate clue rotation timing - use a fixed interval for simplicity
   const getClueRotationInterval = () => {
     if (!currentWord) return 3000; // Default 3 seconds
     
     const totalClues = currentWord.word.clues.length;
     if (totalClues <= 1) return 5000; // If only one clue, show it for 5 seconds
     
-    // Calculate remaining time based on current timer state
-    const firstClueDelay = getFirstClueDelay();
-    const timeElapsed = timeSpent * 1000; // Convert to milliseconds
-    const remainingTime = (timeLimit * 1000) - timeElapsed - firstClueDelay; // Time remaining after first clue
-    const remainingClues = totalClues - 1; // Exclude the first clue
-    
-    // Ensure we have positive remaining time
-    const actualRemainingTime = Math.max(remainingTime, 1000); // At least 1 second
-    
-    // Distribute remaining clues evenly across remaining time
-    const timePerClue = actualRemainingTime / remainingClues;
-    return Math.max(2000, Math.min(timePerClue, 8000)); // Min 2 seconds, max 8 seconds per clue
+    // Use a fixed interval based on total clues
+    // More clues = shorter interval to show them all
+    if (totalClues <= 2) return 4000; // 4 seconds for 2 clues
+    if (totalClues <= 3) return 3000; // 3 seconds for 3 clues
+    if (totalClues <= 4) return 2500; // 2.5 seconds for 4 clues
+    return 2000; // 2 seconds for 5+ clues
   };
 
   // Calculate delay before first clue appears
@@ -440,8 +474,8 @@ export default function QuizMasterPage() {
     const totalClues = currentWord.word.clues.length;
     if (totalClues <= 1) return 2000; // If only one clue, show it quickly
     
-    // First clue appears after 1/4 of the time limit or minimum 3 seconds
-    const delay = Math.max(3000, timeLimit * 1000 / 4);
+    // First clue appears after 1/3 of the time limit or minimum 2 seconds
+    const delay = Math.max(2000, timeLimit * 1000 / 3);
     return delay;
   };
 
@@ -710,7 +744,7 @@ export default function QuizMasterPage() {
             )}
             
               
-              <div className="bg-gradient-to-br from-white to-blue-50 rounded-none md:rounded-2xl lg:rounded-4xl shadow-2xl p-4 md:p-8 lg:p-12 mb-6 border-0 md:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[150px] md:min-h-[250px] lg:min-h-[350px] flex items-center justify-center">
+              <div className="bg-gradient-to-br from-white to-blue-50 rounded-none md:rounded-2xl lg:rounded-4xl shadow-2xl p-4 md:p-8 lg:p-12 pb-8 md:pb-12 lg:pb-16 mb-6 border-0 md:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[150px] md:min-h-[250px] lg:min-h-[350px] flex items-center justify-center">
                 {/* Decorative elements */}
                 <div className="absolute top-4 right-4 w-12 h-12 bg-yellow-300 rounded-full opacity-60"></div>
                 <div className="absolute bottom-4 left-4 w-8 h-8 bg-green-300 rounded-full opacity-60"></div>
@@ -732,12 +766,12 @@ export default function QuizMasterPage() {
 
           {/* Clue Display - Fixed above button container */}
           {cluesVisible && currentWord && timeSpent < timeLimit && (
-            <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-4 border-4 border-green-300 shadow-xl max-w-4xl mx-auto z-40">
-              <div className="text-2xl font-bold text-green-800 mb-2 text-center">💡 Clue:</div>
-              <div className="text-lg text-green-700 font-semibold break-words text-center">
+            <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-6 border-4 border-green-300 shadow-xl max-w-5xl mx-auto z-40">
+              <div className="text-4xl font-bold text-green-800 mb-4 text-center">💡 Clue:</div>
+              <div className="text-2xl text-green-700 font-semibold break-words text-center leading-relaxed">
                 {currentWord?.word?.clues?.[currentClueIndex] || 'No clue available'}
               </div>
-              <div className="text-xs text-gray-500 mt-2 text-center">
+              <div className="text-sm text-gray-500 mt-3 text-center">
                 {currentClueIndex + 1} of {currentWord?.word?.clues?.length || 0} clues
               </div>
             </div>
@@ -1020,7 +1054,7 @@ export default function QuizMasterPage() {
             )}
             
             
-            <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl sm:rounded-2xl lg:rounded-4xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 mb-4 sm:mb-6 border-2 sm:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[120px] sm:min-h-[150px] md:min-h-[200px] lg:min-h-[250px] xl:min-h-[350px] flex items-center justify-center">
+            <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl sm:rounded-2xl lg:rounded-4xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 pb-6 sm:pb-8 md:pb-10 lg:pb-12 mb-4 sm:mb-6 border-2 sm:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[120px] sm:min-h-[150px] md:min-h-[200px] lg:min-h-[250px] xl:min-h-[350px] flex items-center justify-center">
               {/* Decorative elements */}
               <div className="absolute top-2 sm:top-4 right-2 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-yellow-300 rounded-full opacity-60"></div>
               <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 bg-green-300 rounded-full opacity-60"></div>
@@ -1042,12 +1076,12 @@ export default function QuizMasterPage() {
 
         {/* Clue Display - Fixed above button container */}
         {cluesVisible && currentWord && timeSpent < timeLimit && (
-          <div className="fixed bottom-20 sm:bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 sm:border-4 border-green-300 shadow-xl max-w-[95vw] sm:max-w-4xl mx-auto z-40">
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 mb-2 text-center">💡 Clue:</div>
-            <div className="text-sm sm:text-base lg:text-lg text-green-700 font-semibold break-words text-center">
+          <div className="fixed bottom-20 sm:bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 sm:border-4 border-green-300 shadow-xl max-w-[95vw] sm:max-w-5xl mx-auto z-40">
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-800 mb-3 sm:mb-4 text-center">💡 Clue:</div>
+            <div className="text-lg sm:text-xl lg:text-2xl text-green-700 font-semibold break-words text-center leading-relaxed">
               {currentWord?.word?.clues?.[currentClueIndex] || 'No clue available'}
             </div>
-            <div className="text-xs text-gray-500 mt-2 text-center">
+            <div className="text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3 text-center">
               {currentClueIndex + 1} of {currentWord?.word?.clues?.length || 0} clues
             </div>
           </div>

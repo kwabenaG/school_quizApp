@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/config';
+import { getUsedWords, addUsedWord, resetUsedWords as globalResetUsedWords } from '@/lib/wordTracking';
 // Removed unused imports: Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription
 
 interface WordData {
@@ -47,9 +48,71 @@ export default function QuizMasterPage() {
   const [countdown, setCountdown] = useState(0); // Countdown before timer starts
   const [cluesVisible, setCluesVisible] = useState(false); // Clues should be visible
   const [currentClueIndex, setCurrentClueIndex] = useState(0);
-  const [cluePosition, setCluePosition] = useState<{x: number, y: number}>({x: 0, y: 0});
   const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
-  const [usedWordIds, setUsedWordIds] = useState<string[]>([]); // Track used words
+  const [usedWordIds, setUsedWordIds] = useState<Set<string>>(new Set()); // Track used words
+
+  // Load used words from global tracking on component mount
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      try {
+        const globalUsedWords = getUsedWords();
+        setUsedWordIds(globalUsedWords);
+        console.log('🔍 Loaded used words from global tracking:', Array.from(globalUsedWords));
+      } catch (error) {
+        console.error('🔍 Error loading used words:', error);
+        setUsedWordIds(new Set());
+      }
+    }
+  }, []);
+
+  // Sync local state with global tracking when it changes
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      const globalUsedWords = getUsedWords();
+      setUsedWordIds(globalUsedWords);
+      console.log('🔍 Synced with global tracking, used words count:', globalUsedWords.size);
+    }
+  }, []); // Run once on mount
+
+  // Listen for storage changes to sync when reset happens from admin page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'quizUsedWords') {
+          const globalUsedWords = getUsedWords();
+          setUsedWordIds(globalUsedWords);
+          console.log('🔍 Storage change detected, synced used words count:', globalUsedWords.size);
+        }
+      };
+
+      // Listen for custom reset event from admin page
+      const handleResetEvent = () => {
+        const globalUsedWords = getUsedWords();
+        setUsedWordIds(globalUsedWords);
+        console.log('🔍 Reset event detected, synced used words count:', globalUsedWords.size);
+      };
+
+      // Periodic sync as fallback (every 5 seconds)
+      const syncInterval = setInterval(() => {
+        const globalUsedWords = getUsedWords();
+        if (globalUsedWords.size !== usedWordIds.size) {
+          setUsedWordIds(globalUsedWords);
+          console.log('🔍 Periodic sync detected change, used words count:', globalUsedWords.size);
+        }
+      }, 5000);
+
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('quizWordsReset', handleResetEvent);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('quizWordsReset', handleResetEvent);
+        clearInterval(syncInterval);
+      };
+    }
+  }, [usedWordIds.size]);
   const [showScrambledWord, setShowScrambledWord] = useState(false); // Control scrambled word visibility
   const [audioRef] = useState<HTMLAudioElement | null>(null);
   const [beepInterval, setBeepInterval] = useState<NodeJS.Timeout | null>(null);
@@ -130,6 +193,7 @@ export default function QuizMasterPage() {
 
   // Timer effect
   useEffect(() => {
+    console.log('Timer effect running:', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused, clueInterval: !!clueInterval });
     let interval: NodeJS.Timeout;
     
     // Define functions inside useEffect to avoid dependency issues
@@ -138,38 +202,109 @@ export default function QuizMasterPage() {
         return;
       }
       
+      
       const firstClueDelay = getFirstClueDelay();
       const rotationInterval = getClueRotationInterval();
       
+      console.log('Clue timing:', {
+        totalClues: currentWord.word.clues.length,
+        timeLimit: timeLimit,
+        firstClueDelay: firstClueDelay,
+        timeSpent: timeSpent,
+        remainingTime: (timeLimit * 1000) - (timeSpent * 1000) - firstClueDelay
+      });
+      
       // Set initial delay before first clue appears
       const initialDelay = setTimeout(() => {
-        setCluesVisible(true); // Show clues after delay
+        // Only show clues if timer is still running
+        if (timeSpent < timeLimit) {
+          console.log('Setting clues visible to true');
+          setCluesVisible(true); // Show clues after delay
+        } else {
+          console.log('Timer is up, not showing clues');
+          return;
+        }
         
-        // Start rotating clues
-        const clueInterval = setInterval(() => {
-          setCurrentClueIndex(prev => (prev + 1) % currentWord.word.clues.length);
-          setCluePosition({
-            x: Math.random() * (window.innerWidth - 320),
-            y: Math.random() * (window.innerHeight - 200)
-          });
-        }, rotationInterval);
+        // Start rotating clues with time-bound display
+        let clueRotationCount = 0;
+        const startClueRotation = () => {
+          if (clueRotationCount >= currentWord.word.clues.length - 1) {
+            return; // All clues have been shown
+          }
+          
+          // Stop if timer is up
+          if (timeSpent >= timeLimit) {
+            console.log('Timer is up, stopping clue rotation');
+            return;
+          }
+          
+          // Recalculate interval based on remaining time
+          const currentTimeElapsed = timeSpent * 1000;
+          const remainingTime = (timeLimit * 1000) - currentTimeElapsed;
+          const remainingClues = currentWord.word.clues.length - 1 - clueRotationCount;
+          const timePerClue = Math.max(remainingTime / remainingClues, 3000); // Min 3 seconds total per clue
+          const dynamicInterval = Math.min(timePerClue, 10000); // Max 10 seconds total per clue
+          
+          // Clue shows for 2-3 seconds, then disappears for 1-2 seconds before next
+          const clueDisplayTime = Math.min(3000, dynamicInterval * 0.6); // 60% of time showing
+          const clueHideTime = Math.max(1000, dynamicInterval * 0.4); // 40% of time hidden
+          
+          console.log(`Clue rotation ${clueRotationCount + 1}: total time: ${dynamicInterval}ms, show: ${clueDisplayTime}ms, hide: ${clueHideTime}ms`);
+          
+          setTimeout(() => {
+            // Show the clue
+            setCurrentClueIndex(prev => {
+              const newIndex = (prev + 1) % currentWord.word.clues.length;
+              console.log(`Showing clue: ${newIndex + 1} of ${currentWord.word.clues.length} for ${clueDisplayTime}ms`);
+              return newIndex;
+            });
+            
+            // Hide the clue after display time
+            setTimeout(() => {
+              console.log(`Hiding clue, waiting ${clueHideTime}ms before next`);
+              setCluesVisible(false);
+              
+              // Show clues again and schedule next rotation after hide time
+              setTimeout(() => {
+                // Check if timer is still running before showing clues
+                if (timeSpent < timeLimit) {
+                  setCluesVisible(true);
+                  clueRotationCount++;
+                  startClueRotation();
+                }
+              }, clueHideTime);
+            }, clueDisplayTime);
+          }, dynamicInterval);
+        };
         
-        setClueInterval(clueInterval);
+        // Start the first clue rotation
+        startClueRotation();
+        
+        // Store the initial delay timeout as the clue interval for cleanup
+        setClueInterval(initialDelay);
+        console.log('Clue rotation started with dynamic timing');
       }, firstClueDelay);
     };
 
     const stopClueRotation = () => {
       if (clueInterval) {
-        // Clear both setTimeout and setInterval
+        console.log('Stopping clue rotation, clearing timeout:', clueInterval);
+        // Clear the timeout
         clearTimeout(clueInterval as NodeJS.Timeout);
-        clearInterval(clueInterval as NodeJS.Timeout);
         setClueInterval(null);
+      } else {
+        console.log('No clue interval to stop');
       }
     };
     
     if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
       // Start clue rotation with delay - don't set position immediately
-      startClueRotation(); // This will handle the delay before first clue appears
+      console.log('Timer conditions met, starting clue rotation', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused });
+      
+      // Only start clue rotation if it's not already running
+      if (!clueInterval) {
+        startClueRotation(); // This will handle the delay before first clue appears
+      }
       
       // Start continuous beeping synchronized with timer
       const beepInterval = setInterval(() => {
@@ -185,6 +320,7 @@ export default function QuizMasterPage() {
             setMessage('Time\'s up! Click &quot;Reveal Answer&quot; to show the solution.');
             setMessageType('info');
             stopClueRotation(); // Stop clue rotation when time is up
+            setCluesVisible(false); // Hide clues when time is up
             // Stop continuous beeping
             if (beepInterval) {
               clearInterval(beepInterval);
@@ -200,7 +336,9 @@ export default function QuizMasterPage() {
         });
       }, 1000);
     } else {
+      console.log('Timer conditions not met, hiding clues', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused });
       stopClueRotation(); // Stop clue rotation when timer stops or is paused
+      setCluesVisible(false); // Hide clues when timer stops or is paused
       // Stop continuous beeping when timer is paused or stopped
       if (beepInterval) {
         clearInterval(beepInterval);
@@ -213,12 +351,6 @@ export default function QuizMasterPage() {
     };
   }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
 
-  // Separate effect to handle hiding clues when timer stops
-  useEffect(() => {
-    if (!timerStarted || timerPaused) {
-      setCluesVisible(false);
-    }
-  }, [timerStarted, timerPaused]);
 
   // Separate effect to handle beep interval cleanup
   useEffect(() => {
@@ -230,13 +362,30 @@ export default function QuizMasterPage() {
     };
   }, [beepInterval]);
 
+
   // Load a random word when page loads (only if time setup is complete)
   useEffect(() => {
     const loadRandomWord = async () => {
+      // Only run on client side
+      if (typeof window === 'undefined') {
+        console.log('🔍 Skipping word load during SSR');
+        return;
+      }
+      
       try {
-        const excludeIdsParam = usedWordIds.length > 0 ? `?excludeIds=${usedWordIds.join(',')}` : '';
+        const excludeIdsParam = usedWordIds.size > 0 ? `?excludeIds=${Array.from(usedWordIds).filter(id => id && id.trim()).join(',')}` : '';
         const apiUrl = getApiUrl(`/words/random/word${excludeIdsParam}`);
         console.log('🔍 Loading random word from:', apiUrl);
+        console.log('🔍 Used word IDs:', Array.from(usedWordIds));
+        console.log('🔍 Exclude IDs param:', excludeIdsParam);
+        console.log('🔍 API URL constructed:', apiUrl);
+        console.log('🔍 API_CONFIG.BASE_URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+        
+        console.log('🔍 Making fetch request to:', apiUrl);
+        console.log('🔍 Request headers:', {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        });
         
         const response = await fetch(apiUrl, {
           method: 'GET',
@@ -248,10 +397,18 @@ export default function QuizMasterPage() {
           signal: AbortSignal.timeout(10000), // 10 second timeout
         });
         console.log('🔍 Response status:', response.status);
+        console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+        console.log('🔍 Response URL:', response.url);
         
         if (response.ok) {
           const wordData = await response.json();
           console.log('🔍 Word data received:', wordData);
+          
+          // Add this word to global used words tracking
+          const wordId = wordData.word.id;
+          addUsedWord(wordId);
+          setUsedWordIds(getUsedWords());
+          
           setCurrentWord(wordData);
           setGameStarted(true);
           setTimeSpent(0);
@@ -267,6 +424,14 @@ export default function QuizMasterPage() {
         } else {
           const errorText = await response.text();
           console.error('Failed to load word:', response.status, errorText);
+          console.error('🔍 Full error details:', { 
+            status: response.status, 
+            statusText: response.statusText, 
+            url: apiUrl, 
+            errorText: errorText,
+            response: response,
+            headers: Object.fromEntries(response.headers.entries())
+          });
           setMessage(`Failed to load word: ${response.status} ${response.statusText}`);
           setMessageType('error');
         }
@@ -291,7 +456,7 @@ export default function QuizMasterPage() {
       }
     };
 
-    if (!currentWord && !showTimeSetup) {
+    if (!currentWord && !showTimeSetup && typeof window !== 'undefined') {
       loadRandomWord();
     }
   }, [currentWord, showTimeSetup, usedWordIds]);
@@ -308,13 +473,24 @@ export default function QuizMasterPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate clue rotation timing based on time limit - evenly distributed
+  // Calculate clue rotation timing - distribute remaining clues across remaining time
   const getClueRotationInterval = () => {
     if (!currentWord) return 3000; // Default 3 seconds
     
     const totalClues = currentWord.word.clues.length;
-    // Distribute clues evenly across the entire time limit
-    const timePerClue = timeLimit * 1000 / totalClues;
+    if (totalClues <= 1) return 5000; // If only one clue, show it for 5 seconds
+    
+    // Calculate remaining time based on current timer state
+    const firstClueDelay = getFirstClueDelay();
+    const timeElapsed = timeSpent * 1000; // Convert to milliseconds
+    const remainingTime = (timeLimit * 1000) - timeElapsed - firstClueDelay; // Time remaining after first clue
+    const remainingClues = totalClues - 1; // Exclude the first clue
+    
+    // Ensure we have positive remaining time
+    const actualRemainingTime = Math.max(remainingTime, 1000); // At least 1 second
+    
+    // Distribute remaining clues evenly across remaining time
+    const timePerClue = actualRemainingTime / remainingClues;
     return Math.max(2000, Math.min(timePerClue, 8000)); // Min 2 seconds, max 8 seconds per clue
   };
 
@@ -323,6 +499,8 @@ export default function QuizMasterPage() {
     if (!currentWord) return 3000; // Default 3 seconds
     
     const totalClues = currentWord.word.clues.length;
+    if (totalClues <= 1) return 2000; // If only one clue, show it quickly
+    
     // First clue appears after 1/4 of the time limit or minimum 3 seconds
     const delay = Math.max(3000, timeLimit * 1000 / 4);
     return delay;
@@ -392,20 +570,30 @@ export default function QuizMasterPage() {
   };
 
   const nextWord = async () => {
+    console.log('🔍 Next Word button clicked');
     setIsLoading(true);
     setMessage('');
 
     try {
       // Mark current word as used before loading next word
       if (currentWord) {
-        setUsedWordIds(prev => [...prev, currentWord.word.id]);
+        const wordId = currentWord.word.id;
+        addUsedWord(wordId);
+        console.log('🔍 Marked current word as used:', wordId);
       }
 
       // Get random word excluding used words
-      const excludeIdsParam = usedWordIds.length > 0 ? `?excludeIds=${usedWordIds.join(',')}` : '';
+      const currentUsedWords = getUsedWords();
+      const excludeIdsParam = currentUsedWords.size > 0 ? `?excludeIds=${Array.from(currentUsedWords).filter(id => id && id.trim()).join(',')}` : '';
       const response = await fetch(getApiUrl(`/words/random/word${excludeIdsParam}`));
       if (response.ok) {
         const wordData = await response.json();
+        
+        // Add this new word to global used words tracking
+        const wordId = wordData.word.id;
+        addUsedWord(wordId);
+        setUsedWordIds(getUsedWords());
+        
         setCurrentWord(wordData);
         setShowAnswer(false);
         setTimeSpent(0);
@@ -414,36 +602,11 @@ export default function QuizMasterPage() {
         setTimerPaused(false);
         setCountdown(0);
         setShowScrambledWord(false); // Hide scrambled word for new word
-        // Generate position in the large space beside the scrambled word box
-        const getRandomPosition = () => {
-        // Focus on the far right side area where there's lots of space
-        const rightSideAreas = [
-          { x: 80, y: 15 },   // Top-right area (safe from top edge)
-          { x: 85, y: 35 },   // Middle-right area
-          { x: 90, y: 55 },   // Lower-right area
-          { x: 75, y: 75 },   // Bottom-right area (safe from bottom edge)
-          { x: 88, y: 25 },   // Far right area
-          { x: 82, y: 45 }    // Center-right area
-        ];
         
-        // Randomly select one of the right side areas
-        const selectedArea = rightSideAreas[Math.floor(Math.random() * rightSideAreas.length)];
-        
-        // Add some randomness within the area (smaller variation to stay in viewport)
-        const x = selectedArea.x + (Math.random() - 0.5) * 6; // ±3% variation
-        const y = selectedArea.y + (Math.random() - 0.5) * 10; // ±5% variation
-        
-        // Ensure we stay within viewport bounds with additional safety margins
-        const finalX = Math.max(75, Math.min(92, x)); // Keep in right 25% of screen, away from edges
-        const finalY = Math.max(20, Math.min(80, y)); // Keep away from top/bottom edges with more margin
-          
-          return { x: finalX, y: finalY };
-        };
-        
-        setCluePosition(getRandomPosition());
         setWordReady(true); // Word is ready but timer not started
         setMessage('Next word loaded! Click &quot;Start Word&quot; to begin timer.');
         setMessageType('success');
+        console.log('🔍 Next word loaded successfully:', wordData.word.word);
       } else if (response.status === 404) {
         // No more words available
         setMessage('No more words available! All words have been used. Click &quot;Reset Used Words&quot; to start over.');
@@ -453,9 +616,11 @@ export default function QuizMasterPage() {
         throw new Error('Failed to get word');
       }
     } catch (error) {
+      console.error('🔍 Error loading next word:', error);
       setMessage('Failed to get next word. Please try again.');
       setMessageType('error');
     } finally {
+      console.log('🔍 Next word function completed, setting loading to false');
       setIsLoading(false);
     }
   };
@@ -472,7 +637,8 @@ export default function QuizMasterPage() {
   };
 
   const resetUsedWords = () => {
-    setUsedWordIds([]);
+    globalResetUsedWords(); // Reset global tracking
+    setUsedWordIds(new Set()); // Reset local state
     setMessage('Used words reset. All words are now available again.');
     setMessageType('success');
     // Load a new word if none is currently loaded
@@ -482,6 +648,12 @@ export default function QuizMasterPage() {
           const response = await fetch(getApiUrl('/words/random/word'));
           if (response.ok) {
             const wordData = await response.json();
+            
+            // Add this word to global used words tracking
+            const wordId = wordData.word.id;
+            addUsedWord(wordId);
+            setUsedWordIds(getUsedWords());
+            
             setCurrentWord(wordData);
             setGameStarted(true);
             setTimeSpent(0);
@@ -577,7 +749,7 @@ export default function QuizMasterPage() {
             <div className="text-center mb-4">
               <div className="inline-flex items-center bg-gray-100 rounded-full px-4 py-2 text-sm font-semibold text-gray-700">
                 <span className="mr-2">📚</span>
-                Words Used: {usedWordIds.length}
+                Words Used: {usedWordIds.size}
               </div>
             </div>
             
@@ -598,24 +770,6 @@ export default function QuizMasterPage() {
               </div>
             )}
             
-            {/* Scattered Clue - Random position on page */}
-            {cluesVisible && currentWord && (
-              <div 
-                className="fixed bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-4 border-4 border-green-300 shadow-xl w-80 z-50"
-                style={{
-                  left: `${cluePosition.x}%`,
-                  top: `${cluePosition.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                  maxWidth: '90vw',
-                  maxHeight: '90vh'
-                }}
-              >
-                <div className="text-2xl font-bold text-green-800 mb-2">💡 Clue:</div>
-                <div className="text-lg text-green-700 font-semibold break-words">
-                  {currentWord.word.clues[currentClueIndex]}
-                </div>
-              </div>
-            )}
               
               <div className="bg-gradient-to-br from-white to-blue-50 rounded-none md:rounded-2xl lg:rounded-4xl shadow-2xl p-4 md:p-8 lg:p-12 mb-6 border-0 md:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[150px] md:min-h-[250px] lg:min-h-[350px] flex items-center justify-center">
                 {/* Decorative elements */}
@@ -631,10 +785,24 @@ export default function QuizMasterPage() {
                   )}
                 </div>
               </div>
+              
             </div>
 
 
           </div>
+
+          {/* Clue Display - Fixed above button container */}
+          {cluesVisible && currentWord && timeSpent < timeLimit && (
+            <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-4 border-4 border-green-300 shadow-xl max-w-4xl mx-auto z-40">
+              <div className="text-2xl font-bold text-green-800 mb-2 text-center">💡 Clue:</div>
+              <div className="text-lg text-green-700 font-semibold break-words text-center">
+                {currentWord?.word?.clues?.[currentClueIndex] || 'No clue available'}
+              </div>
+              <div className="text-xs text-gray-500 mt-2 text-center">
+                {currentClueIndex + 1} of {currentWord?.word?.clues?.length || 0} clues
+              </div>
+            </div>
+          )}
 
           {/* Quiz Master Controls (Bottom) */}
           <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border-2 border-gray-200">
@@ -721,7 +889,10 @@ export default function QuizMasterPage() {
                 
                 <div className="flex justify-center space-x-6">
                   <Button 
-                    onClick={nextWord}
+                    onClick={() => {
+                      console.log('🔍 Next Word button clicked in desktop modal');
+                      nextWord();
+                    }}
                     className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-12 py-4 text-2xl rounded-2xl shadow-xl"
                   >
                     Next Word
@@ -909,24 +1080,6 @@ export default function QuizMasterPage() {
               </div>
             )}
             
-            {/* Scattered Clue - Random position on page */}
-            {cluesVisible && currentWord && (
-              <div 
-                className="fixed bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 sm:border-4 border-green-300 shadow-xl w-64 sm:w-80 z-50"
-                style={{
-                  left: `${cluePosition.x}%`,
-                  top: `${cluePosition.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                  maxWidth: '90vw',
-                  maxHeight: '90vh'
-                }}
-              >
-                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 mb-2">💡 Clue:</div>
-                <div className="text-sm sm:text-base lg:text-lg text-green-700 font-semibold break-words">
-                  {currentWord.word.clues[currentClueIndex]}
-                </div>
-              </div>
-            )}
             
             <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl sm:rounded-2xl lg:rounded-4xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 mb-4 sm:mb-6 border-2 sm:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[120px] sm:min-h-[150px] md:min-h-[200px] lg:min-h-[250px] xl:min-h-[350px] flex items-center justify-center">
               {/* Decorative elements */}
@@ -942,10 +1095,24 @@ export default function QuizMasterPage() {
                 )) : 'Loading...'}
               </div>
             </div>
+            
           </div>
 
 
         </div>
+
+        {/* Clue Display - Fixed above button container */}
+        {cluesVisible && currentWord && timeSpent < timeLimit && (
+          <div className="fixed bottom-20 sm:bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border-2 sm:border-4 border-green-300 shadow-xl max-w-[95vw] sm:max-w-4xl mx-auto z-40">
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-800 mb-2 text-center">💡 Clue:</div>
+            <div className="text-sm sm:text-base lg:text-lg text-green-700 font-semibold break-words text-center">
+              {currentWord?.word?.clues?.[currentClueIndex] || 'No clue available'}
+            </div>
+            <div className="text-xs text-gray-500 mt-2 text-center">
+              {currentClueIndex + 1} of {currentWord?.word?.clues?.length || 0} clues
+            </div>
+          </div>
+        )}
 
         {/* Quiz Master Controls (Bottom) */}
         <div className="fixed bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-2xl border-2 border-gray-200 max-w-[95vw] sm:max-w-none">
@@ -1038,7 +1205,10 @@ export default function QuizMasterPage() {
               
               <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-6">
                 <Button 
-                  onClick={nextWord}
+                  onClick={() => {
+                    console.log('🔍 Next Word button clicked in mobile modal');
+                    nextWord();
+                  }}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 sm:px-8 lg:px-12 py-3 sm:py-4 text-lg sm:text-xl lg:text-2xl rounded-xl sm:rounded-2xl shadow-xl"
                 >
                   Next Word

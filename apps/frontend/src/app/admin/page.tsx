@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Upload, Plus, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { getApiUrl } from '@/lib/config';
+import { resetUsedWords as globalResetUsedWords, getUsedWords } from '@/lib/wordTracking';
 
 interface Word {
   id: string;
@@ -32,10 +33,16 @@ export default function AdminPage() {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editWord, setEditWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
+  const [usedWordsCount, setUsedWordsCount] = useState(0);
 
   // Load words on component mount
   useEffect(() => {
     loadWords();
+    // Load used words count - only on client side
+    if (typeof window !== 'undefined') {
+      const usedWords = getUsedWords();
+      setUsedWordsCount(usedWords.size);
+    }
   }, []);
 
   const loadWords = async () => {
@@ -266,6 +273,19 @@ export default function AdminPage() {
     setEditWord({ word: '', clues: [''], difficulty: 'medium' });
   };
 
+  const resetUsedWords = () => {
+    globalResetUsedWords();
+    setUsedWordsCount(0);
+    setMessage('Quiz used words have been reset. All words are now available for the quiz.');
+    setMessageType('success');
+    
+    // Dispatch custom event to notify other components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('quizWordsReset'));
+      console.log('🔍 Dispatched quizWordsReset event');
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy': return 'bg-green-100 text-green-800';
@@ -307,6 +327,33 @@ export default function AdminPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Quiz Status */}
+        <div className="mb-6 sm:mb-8">
+          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 shadow-xl">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+                <div className="text-center sm:text-left">
+                  <h3 className="text-lg sm:text-xl font-bold text-purple-800 mb-2">Quiz Status</h3>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl">📚</span>
+                      <span className="text-sm sm:text-base text-gray-700">
+                        Words Used: <span className="font-bold text-purple-600">{usedWordsCount}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={resetUsedWords}
+                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base rounded-lg sm:rounded-xl shadow-lg"
+                >
+                  Reset Used Words
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* CSV Import Section */}
         {/* <Card className="mb-6 sm:mb-8 shadow-2xl">
@@ -597,38 +644,38 @@ export default function AdminPage() {
                     // Normal Word Display
                     <div 
                       className={`p-3 sm:p-4 border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 ${
-                        selectedWords.includes(word.id) ? 'bg-blue-50 border-blue-300' : 'bg-white'
-                      }`}
-                    >
+                    selectedWords.includes(word.id) ? 'bg-blue-50 border-blue-300' : 'bg-white'
+                  }`}
+                >
                       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
-                        <input
-                          type="checkbox"
-                          checked={selectedWords.includes(word.id)}
-                          onChange={() => toggleWordSelection(word.id)}
+                    <input
+                      type="checkbox"
+                      checked={selectedWords.includes(word.id)}
+                      onChange={() => toggleWordSelection(word.id)}
                           className="w-4 h-4 mt-1"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <span className="font-bold text-base sm:text-lg break-all">{word.word}</span>
                             <Badge className={getDifficultyColor(word.difficulty)} variant="secondary">
-                              {word.difficulty}
-                            </Badge>
-                            {!word.isActive && (
+                          {word.difficulty}
+                        </Badge>
+                        {!word.isActive && (
                               <Badge variant="secondary" className="text-xs">Inactive</Badge>
-                            )}
-                          </div>
-                          <div className="text-gray-600 mb-2">
-                            {word.clues.map((clue, index) => (
-                              <p key={index} className="text-xs sm:text-sm break-words">
-                                {index + 1}. {clue}
-                              </p>
-                            ))}
-                          </div>
-                          <p className="text-xs sm:text-sm text-gray-500">
-                            Used {word.timesUsed} times
-                          </p>
-                        </div>
+                        )}
                       </div>
+                          <div className="text-gray-600 mb-2">
+                        {word.clues.map((clue, index) => (
+                              <p key={index} className="text-xs sm:text-sm break-words">
+                            {index + 1}. {clue}
+                          </p>
+                        ))}
+                      </div>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                        Used {word.timesUsed} times
+                      </p>
+                    </div>
+                  </div>
                       <div className="flex space-x-2 self-end sm:self-auto">
                         <Button 
                           size="sm" 
@@ -638,7 +685,7 @@ export default function AdminPage() {
                           disabled={isLoading}
                         >
                           <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
+                    </Button>
                         <Button 
                           size="sm" 
                           variant="outline" 
@@ -647,8 +694,8 @@ export default function AdminPage() {
                           disabled={isLoading}
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      </div>
+                    </Button>
+                  </div>
                     </div>
                   )}
                 </div>

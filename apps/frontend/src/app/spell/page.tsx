@@ -125,19 +125,203 @@ export default function SpellPage() {
     { id: 4, label: 'Pack 4', isSelected: false, isShuffled: false },
     { id: 5, label: 'Pack 5', isSelected: false, isShuffled: false }
   ]);
-
+  
   const [selectedPack, setSelectedPack] = useState<EnvelopePack | null>(null);
   const [isAnimating] = useState(true);
   const [currentEnvelopeIndex, setCurrentEnvelopeIndex] = useState(0);
   const [showAllEnvelopes, setShowAllEnvelopes] = useState(false);
+  const [animationInterval, setAnimationInterval] = useState<NodeJS.Timeout | null>(null);
+  const [whirlSoundInterval, setWhirlSoundInterval] = useState<NodeJS.Timeout | null>(null);
+  const [audioContextReady, setAudioContextReady] = useState(false);
+  const [showAudioPrompt, setShowAudioPrompt] = useState(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [isBeatPlaying, setIsBeatPlaying] = useState(false);
+
+  // Initialize audio context on first user interaction
+  useEffect(() => {
+    const initAudio = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        setAudioContext(ctx);
+        setAudioContextReady(true);
+        setShowAudioPrompt(false);
+        // Don't auto-start beat - let user control it
+        console.log('🔍 Audio context initialized');
+      } catch (error) {
+        console.log('🔍 Could not initialize audio context:', error);
+      }
+    };
+
+    // Show audio prompt after a short delay
+    const promptTimer = setTimeout(() => {
+      if (!audioContextReady) {
+        setShowAudioPrompt(true);
+      }
+    }, 1000);
+
+    // Try to initialize immediately
+    initAudio();
+
+    // Also initialize on first user interaction
+    const handleUserInteraction = () => {
+      initAudio();
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      clearTimeout(promptTimer);
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
+
+  // Function to play whirling sound with beat pattern
+  const playWhirlSound = () => {
+    if (!audioContext) {
+      console.log('🔍 No audio context available');
+      return;
+    }
+    
+    try {
+      // Resume audio context if suspended
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log('🔍 Audio context resumed');
+        });
+      }
+      
+      // Create a rhythmic beat pattern (8-beat cycle)
+      const beatPattern = [
+        { time: 0, freq: 300, duration: 0.08, volume: 0.1 },     // Beat 1 - Low
+        { time: 0.15, freq: 400, duration: 0.08, volume: 0.08 }, // Beat 2 - Mid-low
+        { time: 0.3, freq: 500, duration: 0.08, volume: 0.1 },   // Beat 3 - Mid
+        { time: 0.45, freq: 600, duration: 0.08, volume: 0.08 }, // Beat 4 - Mid-high
+        { time: 0.6, freq: 400, duration: 0.08, volume: 0.08 },  // Beat 5 - Mid-low
+        { time: 0.75, freq: 300, duration: 0.08, volume: 0.1 },  // Beat 6 - Low
+        { time: 0.9, freq: 500, duration: 0.08, volume: 0.08 },  // Beat 7 - Mid
+        { time: 1.05, freq: 700, duration: 0.15, volume: 0.15 }  // Beat 8 - High (accent)
+      ];
+      
+      const currentTime = audioContext.currentTime;
+      
+      beatPattern.forEach((beat, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        // Connect nodes
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configure the beat sound
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(beat.freq, currentTime + beat.time);
+        
+        // Add slight frequency variation for more musical feel
+        if (index % 2 === 0) {
+          oscillator.frequency.exponentialRampToValueAtTime(beat.freq * 1.1, currentTime + beat.time + beat.duration * 0.5);
+        }
+        
+        // Configure gain (volume) - use individual beat volume
+        gainNode.gain.setValueAtTime(0, currentTime + beat.time);
+        gainNode.gain.linearRampToValueAtTime(beat.volume, currentTime + beat.time + 0.02);
+        gainNode.gain.linearRampToValueAtTime(0, currentTime + beat.time + beat.duration);
+        
+        // Play the beat
+        oscillator.start(currentTime + beat.time);
+        oscillator.stop(currentTime + beat.time + beat.duration);
+      });
+      
+    } catch (error) {
+      console.log('🔍 Could not play whirl sound:', error);
+    }
+  };
+
+  // Function to start continuous whirling sound
+  const startWhirlSound = () => {
+    if (whirlSoundInterval) {
+      clearInterval(whirlSoundInterval);
+    }
+    
+    // Play initial beat pattern immediately
+    playWhirlSound();
+    
+    // Play beat pattern every 1.2 seconds (matching beat pattern duration + pause)
+    const interval = setInterval(() => {
+      playWhirlSound();
+    }, 1200);
+    
+    setWhirlSoundInterval(interval);
+    setIsBeatPlaying(true);
+    console.log('🔍 Whirl sound started');
+  };
+
+  // Function to stop whirling sound
+  const stopWhirlSound = () => {
+    if (whirlSoundInterval) {
+      clearInterval(whirlSoundInterval);
+      setWhirlSoundInterval(null);
+    }
+    setIsBeatPlaying(false);
+    console.log('🔍 Whirl sound stopped');
+  };
+
+  // Function to restart whirling sound (if all envelopes are deselected)
+  const restartWhirlSound = () => {
+    const hasSelectedEnvelopes = envelopes.some(env => env.isSelected);
+    if (!hasSelectedEnvelopes && audioContextReady && isBeatPlaying) {
+      startWhirlSound();
+    }
+  };
+
+  // Function to toggle beat on/off
+  const toggleBeat = () => {
+    if (isBeatPlaying) {
+      stopWhirlSound();
+    } else {
+      startWhirlSound();
+    }
+  };
 
   useEffect(() => {
     if (isAnimating) {
       startSlidingAnimation();
     }
+    
+    // Cleanup on unmount
+    return () => {
+      if (animationInterval) {
+        clearInterval(animationInterval);
+      }
+      stopWhirlSound();
+      if (audioContext) {
+        audioContext.close();
+      }
+    };
   }, [isAnimating]);
 
+  // Restart animation when selection changes
+  useEffect(() => {
+    if (isAnimating && animationInterval) {
+      clearInterval(animationInterval);
+      setCurrentEnvelopeIndex(0); // Reset to first available envelope
+      startSlidingAnimation();
+      // Don't restart whirling sound - it should stop when envelope is selected
+    }
+  }, [envelopes.filter(env => !env.isSelected).length]);
+
   const startSlidingAnimation = () => {
+    // Clear existing interval
+    if (animationInterval) {
+      clearInterval(animationInterval);
+    }
+    
     const interval = setInterval(() => {
       setCurrentEnvelopeIndex(prevIndex => {
         const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
@@ -158,44 +342,168 @@ export default function SpellPage() {
       });
     }, 2000); // Change envelope every 2 seconds to match animation duration
     
+    setAnimationInterval(interval);
+    
     return () => {
       clearInterval(interval);
     };
   };
 
+  // Function to play selection sound
+  const playSelectionSound = () => {
+    if (!audioContext) return;
+    
+    try {
+      // Create oscillator for selection sound
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // Connect nodes
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Configure the selection sound (pleasant chime)
+      oscillator.type = 'sine';
+      const currentTime = audioContext.currentTime;
+      oscillator.frequency.setValueAtTime(523, currentTime); // C5
+      oscillator.frequency.setValueAtTime(659, currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(784, currentTime + 0.2); // G5
+      
+      // Configure gain (volume)
+      gainNode.gain.setValueAtTime(0, currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.15, currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.3);
+      
+      // Play the sound
+      oscillator.start(currentTime);
+      oscillator.stop(currentTime + 0.3);
+    } catch (error) {
+      console.log('🔍 Could not play selection sound:', error);
+    }
+  };
+
+  // Function to play completion sound
+  const playCompletionSound = () => {
+    if (!audioContext) return;
+    
+    try {
+      // Create oscillator for completion sound
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // Connect nodes
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Configure the completion sound (celebration chord)
+      oscillator.type = 'sine';
+      const currentTime = audioContext.currentTime;
+      oscillator.frequency.setValueAtTime(523, currentTime); // C5
+      oscillator.frequency.setValueAtTime(659, currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(784, currentTime + 0.2); // G5
+      oscillator.frequency.setValueAtTime(1047, currentTime + 0.3); // C6
+      
+      // Configure gain (volume)
+      gainNode.gain.setValueAtTime(0, currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.2, currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.5);
+      
+      // Play the sound
+      oscillator.start(currentTime);
+      oscillator.stop(currentTime + 0.5);
+    } catch (error) {
+      console.log('🔍 Could not play completion sound:', error);
+    }
+  };
+
   const selectEnvelope = (envelope: EnvelopePack) => {
-    setEnvelopes(prev => 
-      prev.map(env => ({ 
+    setEnvelopes(prev => {
+      const newEnvelopes = prev.map(env => ({ 
         ...env, 
         isSelected: env.id === envelope.id ? !env.isSelected : env.isSelected // Toggle selection
-      }))
-    );
+      }));
+      
+      // Check if all envelopes are now selected
+      const allSelected = newEnvelopes.every(env => env.isSelected);
+      if (allSelected) {
+        // Stop whirling sound and play completion sound
+        stopWhirlSound();
+        setTimeout(() => playCompletionSound(), 100);
+      } else {
+        // Check if any envelope is selected
+        const hasSelectedEnvelopes = newEnvelopes.some(env => env.isSelected);
+        if (hasSelectedEnvelopes) {
+          // Stop the whirling beat when any envelope is selected
+          stopWhirlSound();
+        } else {
+          // Restart beat if no envelopes are selected
+          setTimeout(() => restartWhirlSound(), 100);
+        }
+      }
+      
+      return newEnvelopes;
+    });
     setSelectedPack(envelope);
+    
+    // Play selection sound
+    playSelectionSound();
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
+      onClick={() => {
+        // Start audio on first click if not already started
+        if (!audioContextReady) {
+          try {
+            const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+            if (ctx.state === 'suspended') {
+              ctx.resume();
+            }
+            setAudioContext(ctx);
+            setAudioContextReady(true);
+            setShowAudioPrompt(false);
+            // Don't auto-start beat - let user control it
+            console.log('🔍 Audio context initialized on user interaction');
+          } catch (error) {
+            console.log('🔍 Could not start beat on click:', error);
+          }
+        }
+      }}
+    >
       {/* Inject CSS animation styles */}
       <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+      
+      {/* Audio Prompt - Show when audio isn't ready */}
+      {showAudioPrompt && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-100 border-2 border-yellow-400 rounded-lg px-4 py-2 shadow-lg">
+          <div className="flex items-center space-x-2">
+            <span className="text-2xl">🔊</span>
+            <span className="text-sm font-semibold text-yellow-800">
+              Click anywhere to start the beat!
+            </span>
+          </div>
+        </div>
+      )}
       
       {/* Top Header - Fixed at top */}
       <div className="w-full bg-white/80 backdrop-blur-sm shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 py-2 sm:py-3 md:py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-3 md:space-y-0">
-            {/* Home Button */}
-            <Link href="/">
+          {/* Home Button */}
+          <Link href="/">
               <Button className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-2.5 text-xs sm:text-sm md:text-base font-semibold rounded-lg sm:rounded-xl bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white shadow-lg hover:shadow-gray-500/25 transition-all duration-300">
-                🏠 Home
-              </Button>
-            </Link>
+              🏠 Home
+            </Button>
+          </Link>
 
-            {/* Title */}
+          {/* Title */}
             <h1 className="flex items-center gap-1 sm:gap-2 md:gap-3">
               <span className="text-lg sm:text-xl md:text-2xl lg:text-3xl">🎯</span>
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-center">
-                Spell Bound Challenge
-              </span>
-            </h1>
+              Spell Bound Challenge
+            </span>
+          </h1>
           </div>
         </div>
       </div>
@@ -206,24 +514,45 @@ export default function SpellPage() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-1 sm:mb-2 md:mb-3 lg:mb-4">
             Choose your envelope pack!
           </h2>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-gray-600 leading-relaxed max-w-4xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-gray-600 leading-relaxed max-w-4xl mx-auto mb-4">
             Click on the sliding envelopes to select them
           </p>
+          
+          {/* Selection Counter */}
+          {envelopes.some(env => env.isSelected) && (
+            <div className="inline-flex items-center bg-blue-100 rounded-full px-4 py-2 text-sm font-semibold text-blue-800 mb-4">
+              <span className="mr-2">📦</span>
+              Selected: {envelopes.filter(env => env.isSelected).length} of {envelopes.length} packs
+            </div>
+          )}
+          
+          {/* Beat Control Button */}
+          {audioContextReady && (
+            <div className="mb-4">
+              <button
+                onClick={toggleBeat}
+                className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  isBeatPlaying
+                    ? 'bg-red-100 text-red-800 hover:bg-red-200 border-2 border-red-300'
+                    : 'bg-green-100 text-green-800 hover:bg-green-200 border-2 border-green-300'
+                }`}
+              >
+                <span className="mr-2 text-lg">
+                  {isBeatPlaying ? '⏸️' : '▶️'}
+                </span>
+                {isBeatPlaying ? 'Stop Beat' : 'Play Beat'}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Main Content Area - Side by Side Layout */}
+        {/* Main Content Area */}
         <div className="w-full max-w-7xl mx-auto px-4 mb-2 sm:mb-3 md:mb-4 lg:mb-5 xl:mb-6 mt-4 sm:mt-6 md:mt-8 lg:mt-10 xl:mt-12">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 xl:gap-10 items-start">
+          <div className="flex justify-center">
             
-            {/* Sliding Envelopes Container - Left Side */}
-            <div className={`flex justify-center ${envelopes.some(env => env.isSelected) ? 'lg:flex-1' : 'flex-1'}`}>
-              <div className={`envelope-container w-full ${
-                !envelopes.some(env => env.isSelected) 
-                  ? 'max-w-6xl' 
-                  : envelopes.filter(env => env.isSelected).length >= 3 
-                    ? 'max-w-3xl' 
-                    : 'max-w-4xl'
-              }`}>
+            {/* Sliding Envelopes Container */}
+            <div className="flex justify-center flex-1">
+              <div className="envelope-container w-full max-w-6xl">
                 {isAnimating && (() => {
                   const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
                   
@@ -244,9 +573,9 @@ export default function SpellPage() {
                           const colors = envelopeColors[colorIndex % envelopeColors.length];
                           
                           return (
-                            <div
-                              key={envelope.id}
-                              onClick={() => selectEnvelope(envelope)}
+          <div
+            key={envelope.id}
+            onClick={() => selectEnvelope(envelope)}
                               className="cursor-pointer transform hover:scale-105 transition-all duration-300"
                               style={{
                                 animationName: 'fadeInUp',
@@ -255,8 +584,8 @@ export default function SpellPage() {
                                 animationFillMode: 'forwards',
                                 animationDelay: `${index * 0.1}s`
                               }}
-                            >
-                              {/* Envelope */}
+          >
+            {/* Envelope */}
                               <div className={`w-20 h-24 sm:w-24 sm:h-28 md:w-28 md:h-32 lg:w-32 lg:h-36 xl:w-36 xl:h-40 relative transform hover:scale-105 transition-all duration-300 cursor-pointer`}>
                                 {/* Envelope Body */}
                                 <div className={`absolute inset-0 rounded-2xl lg:rounded-3xl shadow-2xl bg-gradient-to-b ${colors.bg} hover:${colors.shadow} transition-all duration-300`}
@@ -265,7 +594,7 @@ export default function SpellPage() {
                                        boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
                                      }}>
                                   
-                                  {/* Envelope Flap */}
+              {/* Envelope Flap */}
                                   <div className={`absolute top-0 left-0 w-full h-12 sm:h-14 md:h-16 lg:h-18 xl:h-20 2xl:h-22 transform -skew-y-1 origin-top rounded-t-2xl lg:rounded-t-3xl`}
                                        style={{
                                          background: `linear-gradient(135deg, ${colors.flap.includes('blue') ? '#1e40af' : colors.flap.includes('purple') ? '#7c3aed' : colors.flap.includes('pink') ? '#db2777' : colors.flap.includes('orange') ? '#ea580c' : '#0d9488'}, ${colors.flap.includes('blue') ? '#1e3a8a' : colors.flap.includes('purple') ? '#6d28d9' : colors.flap.includes('pink') ? '#be185d' : colors.flap.includes('orange') ? '#c2410c' : '#0f766e'})`,
@@ -274,51 +603,60 @@ export default function SpellPage() {
                                     {/* Flap Fold Line */}
                                     <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
                                   </div>
-                                  
-                                  {/* Envelope Content */}
+              
+              {/* Envelope Content */}
                                   <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-6 sm:pt-8 md:pt-10 lg:pt-12 xl:pt-14">
                                     <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-2 sm:mb-3 md:mb-4 lg:mb-5 drop-shadow-lg">✉️</div>
                                     <div className="text-white font-bold text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl drop-shadow-lg text-center px-1">
-                                      {envelope.label}
-                                    </div>
-                                  </div>
-                                  
+                  {envelope.label}
+                </div>
+              </div>
+              
                                   
                                   {/* Envelope Edge Highlight */}
                                   <div className="absolute inset-0 rounded-2xl lg:rounded-3xl border border-white/20 pointer-events-none"></div>
                                   
                                   {/* Bottom Shadow */}
                                   <div className="absolute -bottom-1 left-2 right-2 h-2 bg-black/10 rounded-b-2xl lg:rounded-b-3xl blur-sm"></div>
-                                </div>
-                              </div>
-                                  
-                              {/* Pack Label */}
+              </div>
+            </div>
+            
+            {/* Pack Label */}
                               <div className="text-center mt-2 sm:mt-3 md:mt-4 lg:mt-5 xl:mt-6">
                                 <div className="text-gray-800 font-semibold text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl">
-                                  {envelope.label}
-                                </div>
-                              </div>
-                            </div>
+                {envelope.label}
+              </div>
+              </div>
+            </div>
                           );
                         })}
-                      </div>
+          </div>
                     );
                   }
                   
                   // Show single sliding envelope
-                  const currentEnvelope = nonSelectedEnvelopes[currentEnvelopeIndex];
-                  if (!currentEnvelope) return null;
-                  
+          const currentEnvelope = nonSelectedEnvelopes[currentEnvelopeIndex];
+          if (!currentEnvelope) {
+            // All envelopes selected - show completion message
+            return (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="text-6xl mb-4">🎉</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">All Packs Selected!</h3>
+                <p className="text-gray-600">You've selected all available envelope packs.</p>
+              </div>
+            );
+          }
+          
                   const colorIndex = currentEnvelope.id - 1;
-                  const colors = envelopeColors[colorIndex % envelopeColors.length];
-                  
-                  return (
-                    <div
-                      key={currentEnvelope.id}
-                      onClick={() => selectEnvelope(currentEnvelope)}
+          const colors = envelopeColors[colorIndex % envelopeColors.length];
+          
+          return (
+            <div
+              key={currentEnvelope.id}
+              onClick={() => selectEnvelope(currentEnvelope)}
                       className="sliding-envelope cursor-pointer transform hover:scale-105 transition-all duration-500 animate-slide-in-out"
-                    >
-                      {/* Envelope */}
+            >
+              {/* Envelope */}
                       <div className={`w-35 h-44 sm:w-40 sm:h-48 md:w-48 md:h-56 lg:w-52 lg:h-60 xl:w-56 xl:h-64 2xl:w-60 2xl:h-68 relative transform hover:scale-105 transition-all duration-300 cursor-pointer`}>
                         {/* Envelope Body */}
                         <div className={`absolute inset-0 rounded-2xl lg:rounded-3xl shadow-2xl bg-gradient-to-b ${colors.bg} hover:${colors.shadow} transition-all duration-300`}
@@ -327,7 +665,7 @@ export default function SpellPage() {
                                boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
                              }}>
                           
-                          {/* Envelope Flap */}
+                {/* Envelope Flap */}
                           <div className={`absolute top-0 left-0 w-full h-12 sm:h-14 md:h-16 lg:h-18 xl:h-20 2xl:h-22 transform -skew-y-1 origin-top rounded-t-2xl lg:rounded-t-3xl`}
                                style={{
                                  background: `linear-gradient(135deg, ${colors.flap.includes('blue') ? '#1e40af' : colors.flap.includes('purple') ? '#7c3aed' : colors.flap.includes('pink') ? '#db2777' : colors.flap.includes('orange') ? '#ea580c' : '#0d9488'}, ${colors.flap.includes('blue') ? '#1e3a8a' : colors.flap.includes('purple') ? '#6d28d9' : colors.flap.includes('pink') ? '#be185d' : colors.flap.includes('orange') ? '#c2410c' : '#0f766e'})`,
@@ -336,13 +674,13 @@ export default function SpellPage() {
                             {/* Flap Fold Line */}
                             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
                           </div>
-                          
-                          {/* Envelope Content */}
+                
+                {/* Envelope Content */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-8 sm:pt-10 md:pt-12 lg:pt-14 xl:pt-16 2xl:pt-18">
                             <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl mb-3 sm:mb-4 md:mb-5 lg:mb-6 drop-shadow-lg">✉️</div>
                             <div className="text-white font-bold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl drop-shadow-lg text-center px-2">
-                              {currentEnvelope.label}
-                            </div>
+                    {currentEnvelope.label}
+                  </div>
                           </div>
                           
                           {/* Envelope Edge Highlight */}
@@ -350,96 +688,21 @@ export default function SpellPage() {
                           
                           {/* Bottom Shadow */}
                           <div className="absolute -bottom-1 left-2 right-2 h-2 bg-black/10 rounded-b-2xl lg:rounded-b-3xl blur-sm"></div>
-                        </div>
-                      </div>
-                          
-                      {/* Pack Label */}
-                      <div className="text-center mt-4 sm:mt-6 md:mt-8 lg:mt-10 xl:mt-12">
-                        <div className="text-gray-800 font-semibold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl">
-                          {currentEnvelope.label}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Selected Envelopes - Right Side */}
-            {envelopes.some(env => env.isSelected) && (
-              <div className={`flex-1 ${envelopes.filter(env => env.isSelected).length >= 3 ? 'lg:max-w-lg' : 'lg:max-w-md'}`}>
-                <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-4 sm:p-5 md:p-6 lg:p-7 xl:p-8 shadow-xl border border-white/20 h-full">
-                  <div className="text-center mb-4 sm:mb-5 md:mb-6">
-                    <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 mb-2">
-                      Selected Packs
-                    </h3>
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600">
-                      Click to deselect
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-5">
-                    {envelopes.filter(env => env.isSelected).map((envelope) => (
-                      <div
-                        key={envelope.id}
-                        onClick={() => selectEnvelope(envelope)}
-                        className="relative cursor-pointer transform hover:scale-105 scale-100 transition-all duration-300 group"
-                      >
-                        {/* Envelope */}
-                        <div className="w-20 h-24 sm:w-24 sm:h-28 md:w-28 md:h-32 lg:w-32 lg:h-36 relative transform hover:scale-105 transition-all duration-300 cursor-pointer">
-                          {/* Envelope Body */}
-                          <div className="absolute inset-0 rounded-lg lg:rounded-xl shadow-xl bg-gradient-to-b from-emerald-500 to-emerald-700 ring-1 sm:ring-2 md:ring-3 ring-yellow-400 shadow-yellow-400/50 hover:scale-105 transition-all duration-300 group-hover:shadow-xl"
-                               style={{
-                                 background: 'linear-gradient(135deg, #10b981, #047857)',
-                                 boxShadow: '0 15px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)'
-                               }}>
-                            
-                            {/* Envelope Flap */}
-                            <div className="absolute top-0 left-0 w-full h-6 sm:h-8 md:h-10 lg:h-12 transform -skew-y-1 origin-top rounded-t-lg lg:rounded-t-xl"
-                                 style={{
-                                   background: 'linear-gradient(135deg, #047857, #065f46)',
-                                   boxShadow: '0 3px 6px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                 }}>
-                              {/* Flap Fold Line */}
-                              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
-                            </div>
-                            
-                            {/* Envelope Content */}
-                            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-4 sm:pt-6 md:pt-8 lg:pt-10">
-                              <div className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl mb-1 drop-shadow-lg">✉️</div>
-                              <div className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg drop-shadow-lg text-center px-1">
-                                {envelope.label}
-                              </div>
-                            </div>
-                            
-                            {/* Selection Indicator */}
-                            <div className="absolute inset-0 bg-yellow-400/20 rounded-lg lg:rounded-xl flex items-center justify-center">
-                              <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl animate-pulse drop-shadow-lg">🎯</div>
-                            </div>
-                            
-                            {/* Envelope Edge Highlight */}
-                            <div className="absolute inset-0 rounded-lg lg:rounded-xl border border-white/20 pointer-events-none"></div>
-                            
-                            {/* Bottom Shadow */}
-                            <div className="absolute -bottom-1 left-1 right-1 h-1.5 bg-black/10 rounded-b-lg lg:rounded-b-xl blur-sm"></div>
-                          </div>
-                        </div>
-                        
-                        {/* Pack Label */}
-                        <div className="text-center mt-2 sm:mt-3">
-                          <div className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base">
-                            {envelope.label}
-                          </div>
-                          <div className="text-emerald-600 font-bold text-xs sm:text-sm animate-pulse">
-                            SELECTED
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
-            )}
+              
+              {/* Pack Label */}
+                      <div className="text-center mt-4 sm:mt-6 md:mt-8 lg:mt-10 xl:mt-12">
+                        <div className="text-gray-800 font-semibold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl">
+                  {currentEnvelope.label}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+              </div>
+      </div>
+
           </div>
         </div>
 

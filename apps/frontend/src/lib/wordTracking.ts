@@ -1,15 +1,31 @@
 // Global word tracking utilities
 const QUIZ_USED_WORDS_KEY = 'quizUsedWords';
+const CURRENT_QUIZ_WORD_KEY = 'currentQuizWord';
+
+interface WordData {
+  word: {
+    id: string;
+    word: string;
+    clues: string[];
+    difficulty: string;
+  };
+  scrambled: string;
+  correctWord: string;
+}
 
 export interface WordTracking {
   getUsedWords: () => Set<string>;
   addUsedWord: (wordId: string) => void;
   resetUsedWords: () => void;
   isWordUsed: (wordId: string) => boolean;
+  setCurrentQuizWord: (wordData: WordData) => void;
+  getCurrentQuizWord: () => WordData | null;
+  clearCurrentQuizWord: () => void;
 }
 
 // Global word tracking instance
 let usedWords: Set<string> = new Set();
+let currentQuizWord: WordData | null = null;
 
 // Load used words from localStorage
 const loadUsedWords = (): void => {
@@ -49,8 +65,42 @@ const saveUsedWords = (): void => {
   }
 };
 
+// Load current quiz word from localStorage
+const loadCurrentQuizWord = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
+  
+  try {
+    const savedCurrentWord = localStorage.getItem(CURRENT_QUIZ_WORD_KEY);
+    if (savedCurrentWord) {
+      currentQuizWord = JSON.parse(savedCurrentWord);
+      console.log('🔍 Loaded current quiz word from localStorage:', currentQuizWord);
+    }
+  } catch (error) {
+    console.error('Failed to parse current quiz word from localStorage:', error);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(CURRENT_QUIZ_WORD_KEY);
+    }
+    currentQuizWord = null;
+  }
+};
+
+// Save current quiz word to localStorage
+const saveCurrentQuizWord = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return;
+  }
+  
+  if (currentQuizWord) {
+    localStorage.setItem(CURRENT_QUIZ_WORD_KEY, JSON.stringify(currentQuizWord));
+    console.log('🔍 Saved current quiz word to localStorage:', currentQuizWord);
+  }
+};
+
 // Initialize on module load
 loadUsedWords();
+loadCurrentQuizWord();
 
 export const wordTracking: WordTracking = {
   getUsedWords: (): Set<string> => {
@@ -78,6 +128,32 @@ export const wordTracking: WordTracking = {
 
   isWordUsed: (wordId: string): boolean => {
     return usedWords.has(wordId);
+  },
+
+  setCurrentQuizWord: (wordData: WordData): void => {
+    currentQuizWord = wordData;
+    saveCurrentQuizWord();
+    console.log('🔍 Set current quiz word:', wordData);
+    
+    // Dispatch custom event to notify other tabs/pages
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('currentQuizWordChanged', { 
+        detail: wordData 
+      }));
+      console.log('🔍 Dispatched currentQuizWordChanged event');
+    }
+  },
+
+  getCurrentQuizWord: (): WordData | null => {
+    return currentQuizWord;
+  },
+
+  clearCurrentQuizWord: (): void => {
+    currentQuizWord = null;
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(CURRENT_QUIZ_WORD_KEY);
+    }
+    console.log('🔍 Cleared current quiz word');
   }
 };
 
@@ -86,3 +162,6 @@ export const getUsedWords = wordTracking.getUsedWords;
 export const addUsedWord = wordTracking.addUsedWord;
 export const resetUsedWords = wordTracking.resetUsedWords;
 export const isWordUsed = wordTracking.isWordUsed;
+export const setCurrentQuizWord = wordTracking.setCurrentQuizWord;
+export const getCurrentQuizWord = wordTracking.getCurrentQuizWord;
+export const clearCurrentQuizWord = wordTracking.clearCurrentQuizWord;

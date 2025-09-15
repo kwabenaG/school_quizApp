@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Upload, Plus, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { getApiUrl } from '@/lib/config';
-import { resetUsedWords as globalResetUsedWords, getUsedWords } from '@/lib/wordTracking';
+import { getUsedWords, resetUsedWords as globalResetUsedWords } from '@/lib/wordTracking';
 
 interface Word {
   id: string;
@@ -34,6 +34,13 @@ export default function AdminPage() {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editWord, setEditWord] = useState({ word: '', clues: [''], difficulty: 'medium' as 'easy' | 'medium' | 'hard' });
   const [usedWordsCount, setUsedWordsCount] = useState(0);
+  const [currentQuizWord, setCurrentQuizWord] = useState<{
+    word: Word;
+    scrambled: string;
+    correctWord: string;
+  } | null>(null);
+  const [showQuizWordDisplay, setShowQuizWordDisplay] = useState(false);
+  const [wordActiveTime, setWordActiveTime] = useState<Date | null>(null);
 
   // Load words on component mount
   useEffect(() => {
@@ -42,8 +49,36 @@ export default function AdminPage() {
     if (typeof window !== 'undefined') {
       const usedWords = getUsedWords();
       setUsedWordsCount(usedWords.size);
+      
     }
   }, []);
+
+  // Auto-refresh current word every 2 seconds for faster updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCurrentQuizWord();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-show word display when word is available
+  useEffect(() => {
+    if (currentQuizWord && currentQuizWord.word) {
+      setShowQuizWordDisplay(true);
+    }
+  }, [currentQuizWord]);
+
+  // Countdown timer for active word
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  useEffect(() => {
+    if (wordActiveTime) {
+      const interval = setInterval(() => {
+        setTimeElapsed(Math.floor((new Date().getTime() - wordActiveTime.getTime()) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [wordActiveTime]);
 
   const loadWords = async () => {
     try {
@@ -286,6 +321,50 @@ export default function AdminPage() {
     }
   };
 
+
+  const fetchCurrentQuizWord = async () => {
+    const apiUrl = getApiUrl('/quiz/current-word');
+    console.log('🔍 [ADMIN] Fetching current quiz word from API...');
+    console.log('🔍 [ADMIN] API URL:', apiUrl);
+    
+    try {
+      const response = await fetch(apiUrl);
+      console.log('🔍 [ADMIN] Response status:', response.status);
+      console.log('🔍 [ADMIN] Response ok:', response.ok);
+      if (response.ok) {
+        const wordData = await response.json();
+        console.log('🔍 [ADMIN] Current word from API:', wordData);
+        
+        if (wordData && wordData.word) {
+          setCurrentQuizWord({
+            word: wordData.word,
+            scrambled: wordData.scrambled,
+            correctWord: wordData.correctWord
+          });
+          setShowQuizWordDisplay(true);
+          setWordActiveTime(new Date());
+          setMessage('✅ Current quiz word loaded - Answer ready for admin!');
+          setMessageType('success');
+        } else {
+          setMessage('No active quiz session found. Start a quiz on the quiz master page first.');
+          setMessageType('info');
+          setCurrentQuizWord(null);
+          setShowQuizWordDisplay(false);
+        }
+      } else {
+        const errorText = await response.text();
+        console.log('🔍 Error response:', errorText);
+        setMessage(`Failed to fetch current word (${response.status}): ${errorText}`);
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error fetching current word:', error);
+      setMessage('Error fetching current word. Check console for details.');
+      setMessageType('error');
+    }
+  };
+
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy': return 'bg-green-100 text-green-800';
@@ -344,16 +423,126 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={resetUsedWords}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base rounded-lg sm:rounded-xl shadow-lg"
-                >
-                  Reset Used Words
-                </Button>
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                  <div className="text-center sm:text-left">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Current quiz word will appear automatically when a quiz is active
+                    </p>
+                  </div>
+                  <Button
+                    onClick={resetUsedWords}
+                    className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base rounded-lg sm:rounded-xl shadow-lg"
+                  >
+                    Reset Used Words
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* New Word Alert */}
+        {showQuizWordDisplay && currentQuizWord && timeElapsed < 10 && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg animate-bounce">
+            <div className="text-center">
+              <h3 className="text-xl font-bold">🎉 NEW QUIZ WORD LOADED!</h3>
+              <p className="text-sm">Answer is ready for admin - Contestants are seeing the scrambled word</p>
+            </div>
+          </div>
+        )}
+
+        {/* Current Quiz Word Display - Prominent Admin View */}
+        {showQuizWordDisplay && currentQuizWord && (
+          <div className="mb-6 sm:mb-8">
+            <Card className="bg-gradient-to-r from-red-50 to-pink-50 border-4 border-red-400 shadow-2xl animate-pulse">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg sm:text-xl lg:text-2xl flex items-center text-red-800">
+                    <span className="text-2xl sm:text-3xl mr-2">🚨</span>
+                    ADMIN: Current Quiz Answer
+                    <span className="ml-2 text-sm bg-red-200 px-2 py-1 rounded-full">LIVE</span>
+                    {wordActiveTime && (
+                      <span className="ml-2 text-sm bg-yellow-200 px-2 py-1 rounded-full text-yellow-800">
+                        ⏱️ {timeElapsed}s
+                      </span>
+                    )}
+                  </CardTitle>
+                  <Button
+                    onClick={() => setShowQuizWordDisplay(false)}
+                    variant="outline"
+                    size="sm"
+                    className="text-red-700 border-red-400 hover:bg-red-100"
+                  >
+                    ✕ Hide
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Scrambled Word */}
+                  <div className="bg-white rounded-xl p-4 sm:p-6 border-2 border-blue-200 shadow-lg">
+                    <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 text-center">What Contestants See</h4>
+                    <div className="text-center">
+                      <div className="text-2xl sm:text-3xl font-mono font-bold text-blue-600 mb-2 tracking-wider break-all">
+                        {currentQuizWord.scrambled}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Scrambled Word ({currentQuizWord.scrambled.length} letters)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Correct Answer - HIGHLIGHTED */}
+                  <div className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-4 sm:p-6 border-4 border-green-400 shadow-xl">
+                    <h4 className="text-lg sm:text-xl font-bold text-green-800 mb-3 text-center flex items-center justify-center">
+                      <span className="text-2xl mr-2">✅</span>
+                      CORRECT ANSWER
+                    </h4>
+                    <div className="text-center">
+                      <div className="text-3xl sm:text-4xl font-black text-green-700 mb-2 tracking-wider break-all bg-white p-4 rounded-lg border-2 border-green-300">
+                        {currentQuizWord.correctWord}
+                      </div>
+                      <div className="text-sm text-green-600 font-semibold">
+                        ⚡ ADMIN ANSWER - READY NOW! ⚡
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Word Details */}
+                <div className="mt-6 bg-white rounded-xl p-4 sm:p-6 border-2 border-gray-200 shadow-lg">
+                  <h4 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 text-center">Word Details</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-sm font-semibold text-gray-600 mb-1">Difficulty</div>
+                      <Badge className={getDifficultyColor(currentQuizWord.word.difficulty)} variant="secondary">
+                        {currentQuizWord.word.difficulty.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-semibold text-gray-600 mb-1">Letter Count</div>
+                      <div className="text-lg font-bold text-purple-600">
+                        {currentQuizWord.word.word.length} letters
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-semibold text-gray-600 mb-2 text-center">Clues</div>
+                    <div className="space-y-2">
+                      {currentQuizWord.word.clues.map((clue, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-3 text-sm">
+                          <span className="font-semibold text-gray-700">{index + 1}.</span> {clue}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* CSV Import Section */}
         {/* <Card className="mb-6 sm:mb-8 shadow-2xl">

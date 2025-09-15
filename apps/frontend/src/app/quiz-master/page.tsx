@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getApiUrl } from '@/lib/config';
-import { getUsedWords, addUsedWord, resetUsedWords as globalResetUsedWords } from '@/lib/wordTracking';
+import { getUsedWords, addUsedWord, resetUsedWords as globalResetUsedWords, setCurrentQuizWord } from '@/lib/wordTracking';
 // Removed unused imports: Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription
 
 interface WordData {
@@ -18,24 +18,12 @@ interface WordData {
   scrambled: string;
 }
 
-interface QuizSession {
-  id: string;
-  name: string;
-  status: string;
-  currentWordIndex: number;
-  totalWords: number;
-  correctAnswers: number;
-  totalAttempts: number;
-}
 
 export default function QuizMasterPage() {
-  const [sessionName] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [totalWords] = useState(10); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [currentWord, setCurrentWord] = useState<WordData | null>(null);
-  const [session] = useState<QuizSession | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [isLoading, setIsLoading] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [message, setMessage] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info'); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
   const [timeSpent, setTimeSpent] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -50,6 +38,7 @@ export default function QuizMasterPage() {
   const [currentClueIndex, setCurrentClueIndex] = useState(0);
   const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
   const [usedWordIds, setUsedWordIds] = useState<Set<string>>(new Set()); // Track used words
+  const [quizSessionId, setQuizSessionId] = useState<string | null>(null); // Track quiz session
 
   // Load used words from global tracking on component mount
   useEffect(() => {
@@ -396,6 +385,37 @@ export default function QuizMasterPage() {
           setShowScrambledWord(false); // Hide scrambled word initially
           setMessage(''); // Clear any previous messages
           setMessageType('success');
+          
+          // Store current word for admin page
+          console.log('🔍 [QUIZ MASTER] Setting current word for admin:', wordData.word.word);
+          setCurrentQuizWord({
+            word: wordData.word,
+            scrambled: wordData.scrambled,
+            correctWord: wordData.word.word
+          });
+
+          // Update quiz session with current word
+          if (quizSessionId) {
+            try {
+              const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  wordId: wordData.word.id
+                }),
+              });
+              
+              if (updateResponse.ok) {
+                console.log('🔍 Quiz session updated with current word');
+              } else {
+                console.error('Failed to update quiz session with current word');
+              }
+            } catch (error) {
+              console.error('Error updating quiz session:', error);
+            }
+          }
         } else if (response.status === 404) {
           // No more words available
           setMessage('No more words available! All words have been used.');
@@ -438,12 +458,55 @@ export default function QuizMasterPage() {
     if (!currentWord && !showTimeSetup && typeof window !== 'undefined') {
       loadRandomWord();
     }
-  }, [currentWord, showTimeSetup, usedWordIds]);
+  }, [currentWord, showTimeSetup, usedWordIds, quizSessionId]);
 
-  const handleTimeSetup = () => {
-    setShowTimeSetup(false);
-    setMessage(`Time limit set to ${timeLimit} seconds per word.`);
-    setMessageType('success');
+  const handleTimeSetup = async () => {
+    try {
+      // Create a quiz session
+      const sessionResponse = await fetch(getApiUrl('/quiz/sessions'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `Quiz Session ${new Date().toLocaleTimeString()}`,
+          totalWords: 10
+        }),
+      });
+
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        setQuizSessionId(sessionData.id);
+        console.log('🔍 Quiz session created:', sessionData.id);
+
+        // Start the session
+        const startResponse = await fetch(getApiUrl(`/quiz/sessions/${sessionData.id}/start`), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (startResponse.ok) {
+          console.log('🔍 Quiz session started');
+          setShowTimeSetup(false);
+          setMessage(`Quiz session started! Time limit set to ${timeLimit} seconds per word.`);
+          setMessageType('success');
+        } else {
+          console.error('Failed to start quiz session');
+          setMessage('Failed to start quiz session. Please try again.');
+          setMessageType('error');
+        }
+      } else {
+        console.error('Failed to create quiz session');
+        setMessage('Failed to create quiz session. Please try again.');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Error creating quiz session:', error);
+      setMessage('Error creating quiz session. Please check your connection.');
+      setMessageType('error');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -453,19 +516,19 @@ export default function QuizMasterPage() {
   };
 
   // Calculate clue rotation timing - use a fixed interval for simplicity
-  const getClueRotationInterval = () => {
-    if (!currentWord) return 3000; // Default 3 seconds
-    
-    const totalClues = currentWord.word.clues.length;
-    if (totalClues <= 1) return 5000; // If only one clue, show it for 5 seconds
-    
-    // Use a fixed interval based on total clues
-    // More clues = shorter interval to show them all
-    if (totalClues <= 2) return 4000; // 4 seconds for 2 clues
-    if (totalClues <= 3) return 3000; // 3 seconds for 3 clues
-    if (totalClues <= 4) return 2500; // 2.5 seconds for 4 clues
-    return 2000; // 2 seconds for 5+ clues
-  };
+  // const getClueRotationInterval = () => {
+  //   if (!currentWord) return 3000; // Default 3 seconds
+  //   
+  //   const totalClues = currentWord.word.clues.length;
+  //   if (totalClues <= 1) return 5000; // If only one clue, show it for 5 seconds
+  //   
+  //   // Use a fixed interval based on total clues
+  //   // More clues = shorter interval to show them all
+  //   if (totalClues <= 2) return 4000; // 4 seconds for 2 clues
+  //   if (totalClues <= 3) return 3000; // 3 seconds for 3 clues
+  //   if (totalClues <= 4) return 2500; // 2.5 seconds for 4 clues
+  //   return 2000; // 2 seconds for 5+ clues
+  // };
 
   // Calculate delay before first clue appears
   const getFirstClueDelay = () => {
@@ -580,6 +643,36 @@ export default function QuizMasterPage() {
         setMessage('Next word loaded! Click &quot;Start Word&quot; to begin timer.');
         setMessageType('success');
         console.log('🔍 Next word loaded successfully:', wordData.word.word);
+        
+        // Store current word for admin page
+        setCurrentQuizWord({
+          word: wordData.word,
+          scrambled: wordData.scrambled,
+          correctWord: wordData.word.word
+        });
+
+        // Update quiz session with current word
+        if (quizSessionId) {
+          try {
+            const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                wordId: wordData.word.id
+              }),
+            });
+            
+            if (updateResponse.ok) {
+              console.log('🔍 Quiz session updated with current word (next)');
+            } else {
+              console.error('Failed to update quiz session with current word (next)');
+            }
+          } catch (error) {
+            console.error('Error updating quiz session (next):', error);
+          }
+        }
       } else if (response.status === 404) {
         // No more words available
         setMessage('No more words available! All words have been used. Click &quot;Reset Used Words&quot; to start over.');
@@ -633,6 +726,36 @@ export default function QuizMasterPage() {
             setWordReady(true);
             setCluesVisible(false);
             setShowScrambledWord(false); // Hide scrambled word initially
+            
+            // Store current word for admin page
+            setCurrentQuizWord({
+              word: wordData.word,
+              scrambled: wordData.scrambled,
+              correctWord: wordData.word.word
+            });
+
+            // Update quiz session with current word
+            if (quizSessionId) {
+              try {
+                const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    wordId: wordData.word.id
+                  }),
+                });
+                
+                if (updateResponse.ok) {
+                  console.log('🔍 Quiz session updated with current word (reset)');
+                } else {
+                  console.error('Failed to update quiz session with current word (reset)');
+                }
+              } catch (error) {
+                console.error('Error updating quiz session (reset):', error);
+              }
+            }
           }
         } catch (error) {
           console.error('Failed to load word:', error);
@@ -744,7 +867,7 @@ export default function QuizMasterPage() {
             )}
             
               
-              <div className="bg-gradient-to-br from-white to-blue-50 rounded-none md:rounded-2xl lg:rounded-4xl shadow-2xl p-4 md:p-8 lg:p-12 pb-8 md:pb-12 lg:pb-16 mb-6 border-0 md:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[150px] md:min-h-[250px] lg:min-h-[350px] flex items-center justify-center">
+              <div className="bg-gradient-to-br from-white to-blue-50 rounded-none md:rounded-2xl lg:rounded-4xl shadow-2xl p-4 md:p-8 lg:p-12 pb-16 md:pb-20 lg:pb-24 mb-10 border-0 md:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[150px] md:min-h-[250px] lg:min-h-[350px] flex items-center justify-center">
                 {/* Decorative elements */}
                 <div className="absolute top-4 right-4 w-12 h-12 bg-yellow-300 rounded-full opacity-60"></div>
                 <div className="absolute bottom-4 left-4 w-8 h-8 bg-green-300 rounded-full opacity-60"></div>
@@ -776,6 +899,7 @@ export default function QuizMasterPage() {
               </div>
             </div>
           )}
+
 
           {/* Quiz Master Controls (Bottom) */}
           <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border-2 border-gray-200">
@@ -1054,7 +1178,7 @@ export default function QuizMasterPage() {
             )}
             
             
-            <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl sm:rounded-2xl lg:rounded-4xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 pb-6 sm:pb-8 md:pb-10 lg:pb-12 mb-4 sm:mb-6 border-2 sm:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[120px] sm:min-h-[150px] md:min-h-[200px] lg:min-h-[250px] xl:min-h-[350px] flex items-center justify-center">
+            <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl sm:rounded-2xl lg:rounded-4xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-12 pb-12 sm:pb-14 md:pb-16 lg:pb-20 mb-4 sm:mb-6 border-2 sm:border-4 lg:border-6 border-blue-200 relative overflow-visible w-full min-h-[120px] sm:min-h-[150px] md:min-h-[200px] lg:min-h-[250px] xl:min-h-[350px] flex items-center justify-center">
               {/* Decorative elements */}
               <div className="absolute top-2 sm:top-4 right-2 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-yellow-300 rounded-full opacity-60"></div>
               <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 bg-green-300 rounded-full opacity-60"></div>
@@ -1086,6 +1210,7 @@ export default function QuizMasterPage() {
             </div>
           </div>
         )}
+
 
         {/* Quiz Master Controls (Bottom) */}
         <div className="fixed bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-6 shadow-2xl border-2 border-gray-200 max-w-[95vw] sm:max-w-none">

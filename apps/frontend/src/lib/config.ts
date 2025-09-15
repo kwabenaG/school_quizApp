@@ -1,7 +1,7 @@
 // API configuration for School Quiz Frontend
 const getBaseUrl = () => {
-  // Production API URL from Vercel rewrites
-  const productionApiUrl = 'https://schoolquizapp-production.up.railway.app';
+  // Production API URL from Vercel rewrites (currently unused, using development URL)
+  // const productionApiUrl = 'https://schoolquizapp-production.up.railway.app';
   
   // Development fallback
   const developmentApiUrl = 'http://localhost:3001';
@@ -36,8 +36,8 @@ const getBaseUrl = () => {
     return finalUrl;
   }
   
-  // Use production URL in production, development URL in development
-  const defaultUrl = isProduction ? productionApiUrl : developmentApiUrl;
+  // Force localhost for debugging
+  const defaultUrl = developmentApiUrl;
   if (!isProduction) console.log('🔍 Using default URL:', defaultUrl);
   return defaultUrl;
 };

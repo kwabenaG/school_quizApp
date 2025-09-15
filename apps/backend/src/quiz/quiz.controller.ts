@@ -1,9 +1,14 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, BadRequestException } from '@nestjs/common';
 import { QuizService, CreateQuizSessionDto, SubmitAnswerDto } from './quiz.service';
+import { WordsService } from '../words/words.service';
+import { QuizStatus } from '../entities/quiz-session.entity';
 
 @Controller('quiz')
 export class QuizController {
-  constructor(private readonly quizService: QuizService) {}
+  constructor(
+    private readonly quizService: QuizService,
+    private readonly wordsService: WordsService
+  ) {}
 
   @Post('sessions')
   async createSession(@Body() createQuizSessionDto: CreateQuizSessionDto) {
@@ -26,8 +31,40 @@ export class QuizController {
   }
 
   @Get('sessions/:id/current-word')
-  async getCurrentWord(@Param('id') id: string) {
-    return await this.quizService.getCurrentWord(id);
+  async getCurrentWordForSession(@Param('id') id: string) {
+    const session = await this.quizService.findSession(id);
+    
+    if (session.status !== QuizStatus.ACTIVE) {
+      throw new BadRequestException('Session is not active');
+    }
+
+    if (!session.currentWordId) {
+      throw new BadRequestException('No current word in session');
+    }
+
+    const word = await this.wordsService.findOne(session.currentWordId);
+    const scrambled = this.wordsService.scrambleWord(word.word);
+
+    return { word, scrambled, session };
+  }
+
+  @Get('sessions/:id/current-word/admin')
+  async getCurrentWordForAdmin(@Param('id') id: string) {
+    return await this.quizService.getCurrentWordForAdmin(id);
+  }
+
+  @Get('current-word')
+  async getCurrentWord() {
+    const result = await this.quizService.getCurrentWord();
+    if (!result) {
+      return { message: 'No active quiz session found' };
+    }
+    return result;
+  }
+
+  @Put('sessions/:id/current-word')
+  async updateCurrentWord(@Param('id') id: string, @Body() body: { wordId: string }) {
+    return await this.quizService.updateCurrentWord(id, body.wordId);
   }
 
   @Post('sessions/:id/submit-answer')

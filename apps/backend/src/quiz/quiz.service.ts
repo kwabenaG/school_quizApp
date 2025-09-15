@@ -78,9 +78,11 @@ export class QuizService {
     return session;
   }
 
-  async getCurrentWord(id: string): Promise<{
+
+  async getCurrentWordForAdmin(id: string): Promise<{
     word: Word;
     scrambled: string;
+    correctWord: string;
     session: QuizSession;
   }> {
     const session = await this.findSession(id);
@@ -96,7 +98,51 @@ export class QuizService {
     const word = await this.wordsService.findOne(session.currentWordId);
     const scrambled = this.wordsService.scrambleWord(word.word);
 
-    return { word, scrambled, session };
+    return { 
+      word, 
+      scrambled, 
+      correctWord: word.word,
+      session 
+    };
+  }
+
+  async getCurrentWord(): Promise<{
+    word: Word;
+    scrambled: string;
+    correctWord: string;
+    session: QuizSession;
+  } | null> {
+    // Find the most recent active session
+    const activeSession = await this.quizSessionRepository.findOne({
+      where: { status: QuizStatus.ACTIVE },
+      order: { createdAt: 'DESC' }
+    });
+
+    if (!activeSession || !activeSession.currentWordId) {
+      return null;
+    }
+
+    const word = await this.wordsService.findOne(activeSession.currentWordId);
+    const scrambled = this.wordsService.scrambleWord(word.word);
+
+    return { 
+      word, 
+      scrambled, 
+      correctWord: word.word,
+      session: activeSession 
+    };
+  }
+
+  async updateCurrentWord(sessionId: string, wordId: string): Promise<QuizSession> {
+    const session = await this.findSession(sessionId);
+    
+    if (session.status !== QuizStatus.ACTIVE) {
+      throw new BadRequestException('Session is not active');
+    }
+
+    // Update the current word ID
+    session.currentWordId = wordId;
+    return await this.quizSessionRepository.save(session);
   }
 
   async submitAnswer(

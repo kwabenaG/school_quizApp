@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export default function QuizMasterPage() {
   // const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
   const [usedWordIds, setUsedWordIds] = useState<Set<string>>(new Set()); // Track used words
   const [quizSessionId, setQuizSessionId] = useState<string | null>(null); // Track quiz session
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to track timer interval
 
   // Load used words from global tracking on component mount
   useEffect(() => {
@@ -336,7 +337,7 @@ export default function QuizMasterPage() {
           // playTimerBeep();
           // Stop timer when time limit is reached, but don't auto-reveal
           if (newTime >= timeLimit) {
-            setMessage('Time\'s up! Click &quot;Reveal Answer&quot; to show the solution.');
+            setMessage('Timer is up!');
             setMessageType('info');
             // stopClueRotation(); // Stop clue rotation when time is up
             // setCluesVisible(false); // Hide clues when time is up
@@ -364,16 +365,28 @@ export default function QuizMasterPage() {
 
   // Simplified timer effect without clues
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    // Clear any existing timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
     
     if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
-      interval = setInterval(() => {
+      timerIntervalRef.current = setInterval(() => {
         setTimeSpent(prev => {
           const newTime = prev + 1;
           
           if (newTime >= timeLimit) {
-            setMessage('Time\'s up! Click "Reveal Answer" to show the solution.');
+            // Clear the timer immediately
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+            setMessage('Timer is up!');
             setMessageType('info');
+            // Stop the timer when time is up
+            setTimerStarted(false);
+            setTimerPaused(false);
             // Play timer up sound when time is up
             playTimerUpSound().catch(console.error);
             return timeLimit;
@@ -387,9 +400,12 @@ export default function QuizMasterPage() {
     }
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     };
-  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -460,6 +476,7 @@ export default function QuizMasterPage() {
           // Update quiz session with current word
           if (quizSessionId) {
             try {
+              console.log('🔍 Updating quiz session with word ID:', wordData.word.id);
               const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
                 method: 'PUT',
                 headers: {
@@ -470,14 +487,19 @@ export default function QuizMasterPage() {
                 }),
               });
               
+              console.log('🔍 Update response status:', updateResponse.status);
+              
               if (updateResponse.ok) {
                 console.log('🔍 Quiz session updated with current word');
               } else {
-                console.error('Failed to update quiz session with current word');
+                const errorText = await updateResponse.text();
+                console.error('Failed to update quiz session with current word:', updateResponse.status, errorText);
               }
             } catch (error) {
               console.error('Error updating quiz session:', error);
             }
+          } else {
+            console.warn('🔍 No quiz session ID available for updating current word');
           }
         } else if (response.status === 404) {
           // No more words available
@@ -724,6 +746,7 @@ export default function QuizMasterPage() {
         // Update quiz session with current word
         if (quizSessionId) {
           try {
+            console.log('🔍 Updating quiz session with word ID (next):', wordData.word.id);
             const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
               method: 'PUT',
               headers: {
@@ -734,14 +757,19 @@ export default function QuizMasterPage() {
               }),
             });
             
+            console.log('🔍 Update response status (next):', updateResponse.status);
+            
             if (updateResponse.ok) {
               console.log('🔍 Quiz session updated with current word (next)');
             } else {
-              console.error('Failed to update quiz session with current word (next)');
+              const errorText = await updateResponse.text();
+              console.error('Failed to update quiz session with current word (next):', updateResponse.status, errorText);
             }
           } catch (error) {
             console.error('Error updating quiz session (next):', error);
           }
+        } else {
+          console.warn('🔍 No quiz session ID available for updating current word (next)');
         }
       } else if (response.status === 404) {
         // No more words available
@@ -807,6 +835,7 @@ export default function QuizMasterPage() {
             // Update quiz session with current word
             if (quizSessionId) {
               try {
+                console.log('🔍 Updating quiz session with word ID (reset):', wordData.word.id);
                 const updateResponse = await fetch(getApiUrl(`/quiz/sessions/${quizSessionId}/current-word`), {
                   method: 'PUT',
                   headers: {
@@ -816,15 +845,20 @@ export default function QuizMasterPage() {
                     wordId: wordData.word.id
                   }),
                 });
-                
+
+                console.log('🔍 Update response status (reset):', updateResponse.status);
+
                 if (updateResponse.ok) {
                   console.log('🔍 Quiz session updated with current word (reset)');
                 } else {
-                  console.error('Failed to update quiz session with current word (reset)');
+                  const errorText = await updateResponse.text();
+                  console.error('Failed to update quiz session with current word (reset):', updateResponse.status, errorText);
                 }
               } catch (error) {
                 console.error('Error updating quiz session (reset):', error);
               }
+            } else {
+              console.warn('🔍 No quiz session ID available for updating current word (reset)');
             }
           }
         } catch (error) {
@@ -899,12 +933,12 @@ export default function QuizMasterPage() {
                   }`}>
                     {timerStarted 
                       ? (timeSpent >= timeLimit 
-                          ? 'Time Up!' 
+                          ? 'Timer is up!' 
                           : timerPaused 
                             ? `Paused ${formatTime(timeSpent)}`
                             : formatTime(timeSpent)
                         )
-                      : 'Ready'
+                      : (timeSpent >= timeLimit ? 'Timer is up!' : 'Ready')
                     }
                   </span>
                 </div>
@@ -1220,12 +1254,12 @@ export default function QuizMasterPage() {
                 }`}>
                   {timerStarted 
                     ? (timeSpent >= timeLimit 
-                        ? 'Time Up!' 
+                        ? 'Timer is up!' 
                         : timerPaused 
                           ? `Paused ${formatTime(timeSpent)}`
                           : formatTime(timeSpent)
                       )
-                    : 'Ready'
+                    : (timeSpent >= timeLimit ? 'Timer is up!' : 'Ready')
                   }
                 </span>
               </div>

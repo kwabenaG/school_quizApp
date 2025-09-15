@@ -844,33 +844,6 @@ export default function SpellPage() {
                 )}
               </div>
               
-              {/* Simple test buttons */}
-              <div className="flex gap-2 justify-center">
-                <button
-                  onClick={async () => {
-                    console.log('🔍 Test beat button clicked');
-                    await startWhirlSound();
-                  }}
-                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200"
-                >
-                  Test Beat
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('🔍 Stop beat button clicked');
-                    stopWhirlSound();
-                  }}
-                  className="px-3 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200"
-                >
-                  Stop Beat
-                </button>
-                <button
-                  onClick={playWhirlSound}
-                  className="px-3 py-1 bg-green-100 text-green-800 rounded text-xs hover:bg-green-200"
-                >
-                  Test Sound
-                </button>
-              </div>
             </div>
           )}
 

@@ -21,7 +21,7 @@ interface WordData {
 
 export default function QuizMasterPage() {
   const [currentWord, setCurrentWord] = useState<WordData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
   const [timeSpent, setTimeSpent] = useState(0);
@@ -34,9 +34,10 @@ export default function QuizMasterPage() {
   const [timerStarted, setTimerStarted] = useState(false); // Timer has started
   const [timerPaused, setTimerPaused] = useState(false); // Timer is paused
   const [countdown, setCountdown] = useState(0); // Countdown before timer starts
-  const [cluesVisible, setCluesVisible] = useState(false); // Clues should be visible
-  const [currentClueIndex, setCurrentClueIndex] = useState(0);
-  const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
+  // Clues functionality commented out
+  // const [cluesVisible, setCluesVisible] = useState(false); // Clues should be visible
+  // const [currentClueIndex, setCurrentClueIndex] = useState(0);
+  // const [clueInterval, setClueInterval] = useState<NodeJS.Timeout | null>(null);
   const [usedWordIds, setUsedWordIds] = useState<Set<string>>(new Set()); // Track used words
   const [quizSessionId, setQuizSessionId] = useState<string | null>(null); // Track quiz session
 
@@ -107,10 +108,16 @@ export default function QuizMasterPage() {
   const [beepInterval, setBeepInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Function to play timer start sound
-  const playTimerStartSound = () => {
+  const playTimerStartSound = async () => {
     try {
       // Create a simple beep sound using Web Audio API
       const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      
+      // Resume audio context if it's suspended
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -133,9 +140,15 @@ export default function QuizMasterPage() {
   };
 
   // Function to play continuous beeping while timer is running
-  const playTimerBeep = () => {
+  const playTimerBeep = async () => {
     try {
       const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      
+      // Resume audio context if it's suspended
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
@@ -154,35 +167,55 @@ export default function QuizMasterPage() {
     }
   };
 
-  // Function to play timer up sound
-  const playTimerUpSound = () => {
+  // Function to play timer up sound - two beeps
+  const playTimerUpSound = async () => {
     try {
       const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      // Resume audio context if it's suspended
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
       
-      // Create a descending alarm sound
-      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime); // 1000Hz
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2); // 800Hz
-      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.4); // 600Hz
-      oscillator.frequency.setValueAtTime(400, audioContext.currentTime + 0.6); // 400Hz
+      // First beep
+      const oscillator1 = audioContext.createOscillator();
+      const gainNode1 = audioContext.createGain();
       
-      gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+      oscillator1.connect(gainNode1);
+      gainNode1.connect(audioContext.destination);
       
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.8);
+      oscillator1.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz
+      gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator1.start(audioContext.currentTime);
+      oscillator1.stop(audioContext.currentTime + 0.2);
+      
+      // Second beep after a short pause
+      setTimeout(() => {
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode2 = audioContext.createGain();
+        
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext.destination);
+        
+        oscillator2.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz
+        gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator2.start(audioContext.currentTime);
+        oscillator2.stop(audioContext.currentTime + 0.2);
+      }, 300); // 300ms pause between beeps
+      
     } catch (error) {
       console.log('Audio not supported or blocked:', error);
     }
   };
 
-  // Timer effect
+  // Timer effect with clues functionality - COMMENTED OUT
+  /*
   useEffect(() => {
-    console.log('Timer effect running:', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused, clueInterval: !!clueInterval });
+    console.log('Timer effect running:', { gameStarted, currentWord: !!currentWord, showAnswer, timerStarted, timerPaused }); // clueInterval commented out
     let interval: NodeJS.Timeout;
     
     // Define functions inside useEffect to avoid dependency issues
@@ -192,11 +225,11 @@ export default function QuizMasterPage() {
         return;
       }
       
-      // Clear any existing clue interval
-      if (clueInterval) {
-        clearTimeout(clueInterval as NodeJS.Timeout);
-        setClueInterval(null);
-      }
+      // Clear any existing clue interval - COMMENTED OUT
+      // if (clueInterval) {
+      //   clearTimeout(clueInterval as NodeJS.Timeout);
+      //   setClueInterval(null);
+      // }
       
       const firstClueDelay = getFirstClueDelay();
       const totalClues = currentWord.word.clues.length;
@@ -216,8 +249,8 @@ export default function QuizMasterPage() {
         // Only show clues if timer is still running
         if (timeSpent < timeLimit) {
           console.log('Starting clue sequence');
-          setCluesVisible(true);
-          setCurrentClueIndex(0); // Start with first clue
+          // setCluesVisible(true);
+          // setCurrentClueIndex(0); // Start with first clue
           
           // Calculate timing for each clue
           const clueDisplayTime = 3000; // Each clue shows for 3 seconds
@@ -240,13 +273,13 @@ export default function QuizMasterPage() {
               setTimeout(() => {
                 if (timeSpent < timeLimit) {
                   console.log(`Hiding clue ${currentClue + 1}`);
-                  setCluesVisible(false);
+                  // setCluesVisible(false);
                   
                   // Show next clue after delay
                   if (currentClue < totalClues - 1) {
                     setTimeout(() => {
                       currentClue++;
-                      setCluesVisible(true);
+                      // setCluesVisible(true);
                       showNextClue();
                     }, timeBetweenClues);
                   }
@@ -300,33 +333,63 @@ export default function QuizMasterPage() {
         setTimeSpent(prev => {
           const newTime = prev + 1;
           // Play beep sound synchronized with timer update
-          playTimerBeep();
+          // playTimerBeep();
           // Stop timer when time limit is reached, but don't auto-reveal
           if (newTime >= timeLimit) {
             setMessage('Time\'s up! Click &quot;Reveal Answer&quot; to show the solution.');
             setMessageType('info');
-            stopClueRotation(); // Stop clue rotation when time is up
-            setCluesVisible(false); // Hide clues when time is up
+            // stopClueRotation(); // Stop clue rotation when time is up
+            // setCluesVisible(false); // Hide clues when time is up
             // Timer stopped - no need to clear beep interval since it's integrated
             // Stop the timer but keep wordReady true so Reveal Answer button stays enabled
             setTimerStarted(false); // Reset timer started state
             setTimerPaused(false); // Reset paused state
             // Play timer up sound
-            playTimerUpSound();
+            // playTimerUpSound();
           }
           return newTime;
         });
       }, 1000);
     } else {
-      stopClueRotation(); // Stop clue rotation when timer stops or is paused
-      setCluesVisible(false); // Hide clues when timer stops or is paused
+      // stopClueRotation(); // Stop clue rotation when timer stops or is paused
+      // setCluesVisible(false); // Hide clues when timer stops or is paused
       // No need to clear beep interval since it's integrated with timer
     }
     return () => {
       clearInterval(interval);
-      stopClueRotation();
+      // stopClueRotation();
     };
   }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]); // eslint-disable-line react-hooks/exhaustive-deps
+  */
+
+  // Simplified timer effect without clues
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (gameStarted && currentWord && !showAnswer && timerStarted && !timerPaused) {
+      interval = setInterval(() => {
+        setTimeSpent(prev => {
+          const newTime = prev + 1;
+          
+          if (newTime >= timeLimit) {
+            setMessage('Time\'s up! Click "Reveal Answer" to show the solution.');
+            setMessageType('info');
+            // Play timer up sound when time is up
+            playTimerUpSound().catch(console.error);
+            return timeLimit;
+          }
+          return newTime;
+        });
+        
+        // Play beep sound after state update for better timing
+        playTimerBeep().catch(console.error);
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [gameStarted, currentWord, showAnswer, timeLimit, timerStarted, timerPaused]);
 
 
 
@@ -381,7 +444,7 @@ export default function QuizMasterPage() {
           setGameStarted(true);
           setTimeSpent(0);
           setWordReady(true); // Word is ready but timer not started
-          setCluesVisible(false); // Hide clues when loading new word
+          // setCluesVisible(false); // Hide clues when loading new word
           setShowScrambledWord(false); // Hide scrambled word initially
           setMessage(''); // Clear any previous messages
           setMessageType('success');
@@ -531,6 +594,8 @@ export default function QuizMasterPage() {
   // };
 
   // Calculate delay before first clue appears
+  // Clues functionality commented out
+  /*
   const getFirstClueDelay = () => {
     if (!currentWord) return 3000; // Default 3 seconds
     
@@ -541,6 +606,7 @@ export default function QuizMasterPage() {
     const delay = Math.max(2000, timeLimit * 1000 / 3);
     return delay;
   };
+  */
 
 
 
@@ -549,7 +615,7 @@ export default function QuizMasterPage() {
     if (currentWord && wordReady) {
       setShowScrambledWord(true); // Show scrambled word when timer starts
       setTimeSpent(0);
-      setCurrentClueIndex(0);
+      // setCurrentClueIndex(0);
       setCountdown(3); // Start countdown at 3
       
       // Show countdown message
@@ -557,9 +623,9 @@ export default function QuizMasterPage() {
       setMessageType('info');
       
       // Play initial countdown sound for "3"
-      playTimerBeep();
+      playTimerBeep().catch(console.error);
       
-      // Countdown interval with sound synchronization
+      // Countdown interval with proper timing synchronization
       const countdownInterval = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -569,16 +635,20 @@ export default function QuizMasterPage() {
             setTimerPaused(false);
             setMessage('Timer started! Good luck!');
             setMessageType('success');
-            // Play timer start sound
-            playTimerStartSound();
             return 0;
           } else {
-            // Play countdown beep for each number (3, 2, 1)
-            playTimerBeep();
             return prev - 1;
           }
         });
+        
+        // Play countdown beep after state update for better timing
+        playTimerBeep().catch(console.error);
       }, 1000);
+      
+      // Play timer start sound when countdown reaches 0
+      setTimeout(() => {
+        playTimerStartSound().catch(console.error);
+      }, 3000); // 3 seconds for countdown
     }
   };
 
@@ -590,7 +660,7 @@ export default function QuizMasterPage() {
         setMessage('Timer resumed!');
         setMessageType('info');
         // Play timer resume sound
-        playTimerStartSound();
+        playTimerStartSound().catch(console.error);
       } else {
         // Pause timer
         setTimerPaused(true);
@@ -607,7 +677,7 @@ export default function QuizMasterPage() {
 
   const nextWord = async () => {
     console.log('🔍 Next Word button clicked');
-    setIsLoading(true);
+    // setIsLoading(true);
     setMessage('');
 
     try {
@@ -633,7 +703,7 @@ export default function QuizMasterPage() {
         setCurrentWord(wordData);
         setShowAnswer(false);
         setTimeSpent(0);
-        setCurrentClueIndex(0);
+        // setCurrentClueIndex(0);
         setTimerStarted(false);
         setTimerPaused(false);
         setCountdown(0);
@@ -687,7 +757,7 @@ export default function QuizMasterPage() {
       setMessageType('error');
     } finally {
       console.log('🔍 Next word function completed, setting loading to false');
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -697,7 +767,7 @@ export default function QuizMasterPage() {
     setTimerStarted(false); // Reset timer started state
     setTimerPaused(false); // Reset paused state
     setCountdown(0); // Reset countdown
-    setCluesVisible(false); // Hide clues when revealing answer
+    // setCluesVisible(false); // Hide clues when revealing answer
     setMessage('Answer revealed to contestants!');
     setMessageType('info');
   };
@@ -724,7 +794,7 @@ export default function QuizMasterPage() {
             setGameStarted(true);
             setTimeSpent(0);
             setWordReady(true);
-            setCluesVisible(false);
+            // setCluesVisible(false);
             setShowScrambledWord(false); // Hide scrambled word initially
             
             // Store current word for admin page
@@ -887,7 +957,8 @@ export default function QuizMasterPage() {
 
           </div>
 
-          {/* Clue Display - Fixed above button container */}
+          {/* Clue Display - COMMENTED OUT */}
+          {/*
           {cluesVisible && currentWord && timeSpent < timeLimit && (
             <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl p-6 border-4 border-green-300 shadow-xl max-w-5xl mx-auto z-40">
               <div className="text-4xl font-bold text-green-800 mb-4 text-center">💡 Clue:</div>
@@ -899,6 +970,7 @@ export default function QuizMasterPage() {
               </div>
             </div>
           )}
+          */}
 
 
           {/* Quiz Master Controls (Bottom) */}
@@ -1198,7 +1270,8 @@ export default function QuizMasterPage() {
 
         </div>
 
-        {/* Clue Display - Fixed above button container */}
+        {/* Clue Display - COMMENTED OUT */}
+        {/*
         {cluesVisible && currentWord && timeSpent < timeLimit && (
           <div className="fixed bottom-20 sm:bottom-32 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 sm:border-4 border-green-300 shadow-xl max-w-[95vw] sm:max-w-5xl mx-auto z-40">
             <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-800 mb-3 sm:mb-4 text-center">💡 Clue:</div>
@@ -1210,6 +1283,7 @@ export default function QuizMasterPage() {
             </div>
           </div>
         )}
+        */}
 
 
         {/* Quiz Master Controls (Bottom) */}

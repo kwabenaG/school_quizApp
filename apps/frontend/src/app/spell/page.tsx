@@ -840,7 +840,7 @@ export default function SpellPage() {
                 {isBeatPlaying ? (
                   <span className="text-green-600 font-bold animate-pulse">🔊 Beat is playing - you should hear sound!</span>
                 ) : (
-                  'Audio ready - click "Start Carousel & Sound" to begin'
+                  <>Audio ready - click &quot;Start Carousel & Sound&quot; to begin</>
                 )}
               </div>
               

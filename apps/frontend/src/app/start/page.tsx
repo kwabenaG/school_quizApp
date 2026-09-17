@@ -29,6 +29,15 @@ export default function QuizStartPage() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [timeSpent, setTimeSpent] = useState(0);
 
+  // Prefill from the landing page join form (/start?session=ABC&name=Ada)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const session = params.get('session');
+    const name = params.get('name');
+    if (session) setSessionId(session);
+    if (name) setStudentName(name);
+  }, []);
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;

@@ -37,8 +37,8 @@ const PLAYER_PERKS = [
 const STEPS = [
   {
     icon: KeyRound,
-    title: 'Enter the code',
-    body: 'Your teacher shares a session code. Type it in with your name.',
+    title: 'Enter the session ID',
+    body: 'Your teacher shares a session ID. Paste it in with your name.',
   },
   {
     icon: Shuffle,
@@ -129,8 +129,8 @@ export default function Home() {
               </h1>
 
               <p className="mx-auto mt-5 max-w-xl text-lg text-pretty text-slate-600 sm:text-xl dark:text-slate-300">
-                Jumbled letters, a helpful clue, and a timer counting up. Get a code
-                from your teacher and see how fast you can solve it.
+                Jumbled letters, a helpful clue, and a timer counting up. Get a
+                session ID from your teacher and see how fast you can solve it.
               </p>
             </Reveal>
 

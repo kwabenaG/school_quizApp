@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowRight, MonitorPlay, Timer } from 'lucide-react';
+import { ArrowRight, MonitorPlay, RotateCcw, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProjectionWord } from '@/components/projection-word';
 import { Input } from '@/components/ui/input';
@@ -774,17 +774,27 @@ export default function QuizMasterPage() {
           console.warn('🔍 No quiz session ID available for updating current word (next)');
         }
       } else if (response.status === 404) {
-        // No more words available
-        setMessage('No more words available! All words have been used. Click &quot;Reset Used Words&quot; to start over.');
+        // No more words available. Clear the round state too: leaving showAnswer
+        // set while currentWord is null renders neither the word nor the reveal
+        // modal, which strands the screen on "Loading…" with no way out.
+        setMessage('Every word has been used. Reset used words to start over.');
         setMessageType('info');
         setCurrentWord(null);
+        setShowAnswer(false);
+        setWordReady(false);
+        setTimerStarted(false);
+        setTimerPaused(false);
+        setTimeSpent(0);
+        setCountdown(0);
+        setShowScrambledWord(false);
       } else {
         throw new Error('Failed to get word');
       }
     } catch (error) {
       console.error('🔍 Error loading next word:', error);
-      setMessage('Failed to get next word. Please try again.');
+      setMessage('Could not load the next word. Check the connection and try again.');
       setMessageType('error');
+      setShowAnswer(false);
     } finally {
       console.log('🔍 Next word function completed, setting loading to false');
       // setIsLoading(false);
@@ -805,7 +815,8 @@ export default function QuizMasterPage() {
   const resetUsedWords = () => {
     globalResetUsedWords(); // Reset global tracking
     setUsedWordIds(new Set()); // Reset local state
-    setMessage('Used words reset. All words are now available again.');
+    setShowAnswer(false);
+    setMessage('Used words reset. All words are available again.');
     setMessageType('success');
     // Load a new word if none is currently loaded
     if (!currentWord) {
@@ -1199,6 +1210,23 @@ export default function QuizMasterPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 pt-10 pb-44 sm:px-6 sm:pt-14">
+        {/* message was set throughout this file but never rendered, so a word
+            bank running dry looked identical to the app hanging. */}
+        {message && (
+          <div
+            role="status"
+            className={`mb-8 rounded-xl border px-4 py-3 text-center text-sm font-medium ${
+              messageType === 'error'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : messageType === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-slate-200 bg-slate-50 text-slate-700'
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
         <p className="text-center text-sm font-bold tracking-[0.3em] text-slate-500 uppercase sm:text-base">
           Unscramble the word
         </p>
@@ -1218,8 +1246,10 @@ export default function QuizMasterPage() {
               </p>
             )
           ) : (
+            // Not necessarily loading: the bank can simply be empty, and saying
+            // "Loading…" there reads as a hang.
             <p className="text-center text-xl font-semibold text-slate-400 sm:text-3xl">
-              Loading&hellip;
+              No word loaded
             </p>
           )}
         </div>
@@ -1288,6 +1318,17 @@ export default function QuizMasterPage() {
             className="h-12 rounded-xl border-slate-300 px-6 text-base font-semibold text-slate-800"
           >
             Next word
+          </Button>
+
+          {/* The only way back when every word has been used. Projection mode
+              always had this; the control screen did not. */}
+          <Button
+            onClick={resetUsedWords}
+            variant="outline"
+            className="h-12 rounded-xl border-slate-300 px-6 text-base font-semibold text-slate-800"
+          >
+            <RotateCcw className="size-4" />
+            Reset used words
           </Button>
 
           {/* Projection mode had no way in: toggleProjection was only wired to

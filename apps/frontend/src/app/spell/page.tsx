@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Mail, PartyPopper, Play, RotateCw, Volume2, VolumeX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SpellEnvelope } from '@/components/spell-envelope';
 
 interface EnvelopePack {
   id: number;
@@ -507,149 +509,72 @@ export default function SpellPage() {
 
   // Function to render carousel content
   const renderCarouselContent = () => {
-    const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
-    
-    const envelopeColors = [
-      { bg: 'from-blue-500 to-blue-700', flap: 'from-blue-600 to-blue-800', shadow: 'shadow-blue-500/50' },
-      { bg: 'from-purple-500 to-purple-700', flap: 'from-purple-600 to-purple-800', shadow: 'shadow-purple-500/50' },
-      { bg: 'from-pink-500 to-pink-700', flap: 'from-pink-600 to-pink-800', shadow: 'shadow-pink-500/50' },
-      { bg: 'from-orange-500 to-orange-700', flap: 'from-orange-600 to-orange-800', shadow: 'shadow-orange-500/50' },
-      { bg: 'from-teal-500 to-teal-700', flap: 'from-teal-600 to-teal-800', shadow: 'shadow-teal-500/50' }
-    ];
-    
-    // Show all envelopes when showAllEnvelopes is true
+    const nonSelectedEnvelopes = envelopes.filter((env) => !env.isSelected);
+
     if (showAllEnvelopes) {
       return (
-        <div className="flex flex-nowrap items-center justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6 h-full overflow-x-auto">
-          {nonSelectedEnvelopes.map((envelope, index) => {
-            const colorIndex = envelope.id - 1;
-            const colors = envelopeColors[colorIndex % envelopeColors.length];
-
-  return (
-              <div
-                key={envelope.id}
-                onClick={() => selectEnvelope(envelope)}
-                className="cursor-pointer transform hover:scale-105 transition-all duration-300"
-                style={{
-                  animationName: 'fadeInUp',
-                  animationDuration: '0.5s',
-                  animationTimingFunction: 'ease-out',
-                  animationFillMode: 'both',
-                  animationDelay: `${index * 0.1}s`
-                }}
-              >
-                {/* Envelope */}
-                <div className={`w-24 h-32 sm:w-28 sm:h-36 md:w-32 md:h-40 lg:w-36 lg:h-44 xl:w-40 xl:h-48 2xl:w-44 2xl:h-52 relative transform hover:scale-105 transition-all duration-300 cursor-pointer`}>
-                  {/* Envelope Body */}
-                  <div className={`absolute inset-0 rounded-xl lg:rounded-2xl shadow-xl bg-gradient-to-b ${colors.bg} hover:${colors.shadow} transition-all duration-300`}
-                       style={{
-                         background: `linear-gradient(135deg, ${colors.bg.includes('blue') ? '#3b82f6' : colors.bg.includes('purple') ? '#8b5cf6' : colors.bg.includes('pink') ? '#ec4899' : colors.bg.includes('orange') ? '#f97316' : '#14b8a6'}, ${colors.bg.includes('blue') ? '#1e40af' : colors.bg.includes('purple') ? '#7c3aed' : colors.bg.includes('pink') ? '#db2777' : colors.bg.includes('orange') ? '#ea580c' : '#0d9488'})`,
-                         boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-                       }}>
-                    
-                    {/* Envelope Flap */}
-                    <div className={`absolute top-0 left-0 w-full h-8 sm:h-10 md:h-12 lg:h-14 xl:h-16 2xl:h-18 transform -skew-y-1 origin-top rounded-t-xl lg:rounded-t-2xl`}
-                         style={{
-                           background: `linear-gradient(135deg, ${colors.flap.includes('blue') ? '#1e40af' : colors.flap.includes('purple') ? '#7c3aed' : colors.flap.includes('pink') ? '#db2777' : colors.flap.includes('orange') ? '#ea580c' : '#0d9488'}, ${colors.flap.includes('blue') ? '#1e3a8a' : colors.flap.includes('purple') ? '#6d28d9' : colors.flap.includes('pink') ? '#be185d' : colors.flap.includes('orange') ? '#c2410c' : '#0f766e'})`,
-                           boxShadow: '0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                         }}>
-                      {/* Flap Fold Line */}
-                      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
-                    </div>
-          
-                    {/* Envelope Content */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-6 sm:pt-8 md:pt-10 lg:pt-12 xl:pt-14 2xl:pt-16">
-                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl mb-2 sm:mb-3 md:mb-4 lg:mb-5 drop-shadow-lg">✉️</div>
-                      <div className="text-white font-bold text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl drop-shadow-lg text-center px-2">
-                        {envelope.label}
-        </div>
-      </div>
-
-                    {/* Envelope Edge Highlight */}
-                    <div className="absolute inset-0 rounded-xl lg:rounded-2xl border border-white/20 pointer-events-none"></div>
-                    
-                    {/* Bottom Shadow */}
-                    <div className="absolute -bottom-1 left-2 right-2 h-2 bg-black/10 rounded-b-xl lg:rounded-b-2xl blur-sm"></div>
-                  </div>
-        </div>
-
-                {/* Pack Label */}
-                <div className="text-center mt-2 sm:mt-3 md:mt-4 lg:mt-5 xl:mt-6">
-                  <div className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl">
-                    {envelope.label}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex h-full flex-wrap items-center justify-center gap-4 sm:gap-6">
+          {nonSelectedEnvelopes.map((envelope, index) => (
+            <div
+              key={envelope.id}
+              className="flex flex-col items-center gap-3"
+              style={{
+                animationName: 'fadeInUp',
+                animationDuration: '0.5s',
+                animationTimingFunction: 'ease-out',
+                animationFillMode: 'both',
+                animationDelay: `${index * 0.1}s`,
+              }}
+            >
+              <SpellEnvelope
+                label={envelope.label}
+                toneIndex={envelope.id - 1}
+                size="md"
+                selected={envelope.isSelected}
+                onSelect={() => selectEnvelope(envelope)}
+              />
+              <span className="text-sm font-semibold text-slate-700">
+                {envelope.label}
+              </span>
+            </div>
+          ))}
         </div>
       );
     }
-    
-    // Show single sliding envelope
+
     const currentEnvelope = nonSelectedEnvelopes[currentEnvelopeIndex];
+
     if (!currentEnvelope) {
-      // All envelopes selected - show completion message
       return (
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <div className="text-6xl mb-4">🎉</div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">All Packs Selected!</h3>
-          <p className="text-gray-600">You&apos;ve selected all available envelope packs.</p>
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          <span className="grid size-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+            <PartyPopper className="size-8" />
+          </span>
+          <h3 className="mt-5 text-2xl font-bold text-slate-900">
+            All packs selected
+          </h3>
+          <p className="mt-2 text-slate-600">
+            Every envelope has been opened. Restart to go again.
+          </p>
         </div>
       );
     }
-    
-    const colorIndex = currentEnvelope.id - 1;
-    const colors = envelopeColors[colorIndex % envelopeColors.length];
-    
+
     return (
       <div
         key={currentEnvelope.id}
-        onClick={() => selectEnvelope(currentEnvelope)}
-        className="sliding-envelope cursor-pointer transform hover:scale-105 transition-all duration-500 animate-slide-in-out"
-          >
-            {/* Envelope */}
-        <div className={`w-35 h-44 sm:w-40 sm:h-48 md:w-48 md:h-56 lg:w-52 lg:h-60 xl:w-56 xl:h-64 2xl:w-60 2xl:h-68 relative transform hover:scale-105 transition-all duration-300 cursor-pointer`}>
-          {/* Envelope Body */}
-          <div className={`absolute inset-0 rounded-2xl lg:rounded-3xl shadow-2xl bg-gradient-to-b ${colors.bg} hover:${colors.shadow} transition-all duration-300`}
-               style={{
-                 background: `linear-gradient(135deg, ${colors.bg.includes('blue') ? '#3b82f6' : colors.bg.includes('purple') ? '#8b5cf6' : colors.bg.includes('pink') ? '#ec4899' : colors.bg.includes('orange') ? '#f97316' : '#14b8a6'}, ${colors.bg.includes('blue') ? '#1e40af' : colors.bg.includes('purple') ? '#7c3aed' : colors.bg.includes('pink') ? '#db2777' : colors.bg.includes('orange') ? '#ea580c' : '#0d9488'})`,
-                 boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-               }}>
-            
-              {/* Envelope Flap */}
-            <div className={`absolute top-0 left-0 w-full h-12 sm:h-14 md:h-16 lg:h-18 xl:h-20 2xl:h-22 transform -skew-y-1 origin-top rounded-t-2xl lg:rounded-t-3xl`}
-                 style={{
-                   background: `linear-gradient(135deg, ${colors.flap.includes('blue') ? '#1e40af' : colors.flap.includes('purple') ? '#7c3aed' : colors.flap.includes('pink') ? '#db2777' : colors.flap.includes('orange') ? '#ea580c' : '#0d9488'}, ${colors.flap.includes('blue') ? '#1e3a8a' : colors.flap.includes('purple') ? '#6d28d9' : colors.flap.includes('pink') ? '#be185d' : colors.flap.includes('orange') ? '#c2410c' : '#0f766e'})`,
-                   boxShadow: '0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                 }}>
-              {/* Flap Fold Line */}
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
-            </div>
-              
-              {/* Envelope Content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-8 sm:pt-10 md:pt-12 lg:pt-14 xl:pt-16 2xl:pt-18">
-              <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl mb-3 sm:mb-4 md:mb-5 lg:mb-6 drop-shadow-lg">✉️</div>
-              <div className="text-white font-bold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl drop-shadow-lg text-center px-2">
-                {currentEnvelope.label}
-                </div>
-              </div>
-              
-            {/* Envelope Edge Highlight */}
-            <div className="absolute inset-0 rounded-2xl lg:rounded-3xl border border-white/20 pointer-events-none"></div>
-            
-            {/* Bottom Shadow */}
-            <div className="absolute -bottom-1 left-2 right-2 h-2 bg-black/10 rounded-b-2xl lg:rounded-b-3xl blur-sm"></div>
-              </div>
-            </div>
-            
-            {/* Pack Label */}
-        <div className="text-center mt-4 sm:mt-6 md:mt-8 lg:mt-10 xl:mt-12">
-          <div className="text-gray-800 font-semibold text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl 2xl:text-4xl">
-            {currentEnvelope.label}
-          </div>
-        </div>
-              </div>
+        className="sliding-envelope animate-slide-in-out flex flex-col items-center gap-5"
+      >
+        <SpellEnvelope
+          label={currentEnvelope.label}
+          toneIndex={currentEnvelope.id - 1}
+          size="lg"
+          onSelect={() => selectEnvelope(currentEnvelope)}
+        />
+        <span className="text-lg font-semibold text-slate-700 sm:text-xl">
+          {currentEnvelope.label}
+        </span>
+      </div>
     );
   };
 
@@ -702,9 +627,12 @@ export default function SpellPage() {
     playSelectionSound();
   };
 
+  const selectedCount = envelopes.filter((env) => env.isSelected).length;
+  const remaining = envelopes.filter((env) => !env.isSelected);
+
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100"
+    <div
+      className="min-h-screen bg-white text-slate-900"
       onClick={() => {
         // Start audio on first click if not already started
         if (!audioContextReady && !audioContext) {
@@ -720,63 +648,89 @@ export default function SpellPage() {
         }
       }}
     >
-      {/* Inject CSS styles */}
       <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
-      
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
-            <Link href="/" className="flex items-center space-x-2 text-gray-800 hover:text-blue-600 transition-colors">
-              <span className="text-lg sm:text-xl md:text-2xl">🏠</span>
-              <span className="text-sm sm:text-base md:text-lg font-semibold">Home</span>
-            </Link>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Link href="/quiz-master" className="text-gray-600 hover:text-blue-600 transition-colors text-sm sm:text-base font-medium">
-                Quiz Master
-              </Link>
-              <Link href="/admin" className="text-gray-600 hover:text-blue-600 transition-colors text-sm sm:text-base font-medium">
-                Admin
-              </Link>
-              </div>
-            </div>
-          </div>
-      </nav>
 
-      {/* Audio Prompt */}
+      {/* Header — matches the rest of the app */}
+      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-md">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-lg font-bold text-white shadow-md shadow-indigo-600/25">
+              S
+            </span>
+            <span className="text-lg font-bold tracking-tight">School Quiz</span>
+          </Link>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link
+              href="/admin"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block"
+            >
+              Words
+            </Link>
+            <Link
+              href="/quiz-master"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              Quiz Master
+            </Link>
+          </div>
+        </nav>
+      </header>
+
       {showAudioPrompt && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-300 rounded-lg px-4 py-2 text-yellow-800 text-sm font-medium z-50">
-          Click anywhere to start the beat!
+        <div
+          role="status"
+          className="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-sm"
+        >
+          Click anywhere to start the beat
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="h-screen flex flex-col items-center justify-start p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 pt-4 sm:pt-6 md:pt-8 lg:pt-10 xl:pt-12">
-        <div className="text-center mb-1 sm:mb-2 md:mb-3 lg:mb-4 xl:mb-5 max-w-5xl">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-1 sm:mb-2 md:mb-3 lg:mb-4">
-            Choose your envelope pack!
-          </h2>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-gray-600 leading-relaxed max-w-4xl mx-auto mb-4">
-            Click on the sliding envelopes to select them
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        {/* Intro */}
+        <div className="text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-indigo-700 uppercase">
+            <Mail className="size-3.5" />
+            Spell Challenge
+          </span>
+
+          <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-balance sm:text-5xl">
+            Pick an envelope
+          </h1>
+          <p className="mx-auto mt-4 max-w-lg text-lg text-pretty text-slate-600">
+            Start the carousel and let the packs spin. Tap one to stop it and
+            claim that envelope for the round.
           </p>
-          
-          {/* Selection Counter */}
-        {envelopes.some(env => env.isSelected) && (
-            <div className="inline-flex items-center bg-blue-100 rounded-full px-4 py-2 text-sm font-semibold text-blue-800 mb-4">
-              <span className="mr-2">📦</span>
-              Selected: {envelopes.filter(env => env.isSelected).length} of {envelopes.length} packs
+
+          {/* Progress */}
+          <div className="mx-auto mt-8 max-w-xs">
+            <div className="flex items-center justify-between text-sm font-medium text-slate-600">
+              <span>{selectedCount} of {envelopes.length} opened</span>
+              <span className="tabular-nums">{remaining.length} left</span>
             </div>
-          )}
-          
-          {/* Start Carousel Button */}
-          <div className="text-center mb-6">
-            <button
+            <div
+              className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={envelopes.length}
+              aria-valuenow={selectedCount}
+              aria-label="Envelope packs opened"
+            >
+              <div
+                className="h-full rounded-full bg-indigo-600 transition-[width] duration-500"
+                style={{ width: `${(selectedCount / envelopes.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Primary control */}
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <Button
               onClick={async () => {
                 console.log('🔍 ===== BUTTON CLICKED =====');
                 console.log('🔍 Current state - isAnimating:', isAnimating, 'isBeatPlaying:', isBeatPlaying);
                 console.log('🔍 Audio context state:', audioContext?.state, 'audioContextReady:', audioContextReady);
                 console.log('🔍 Whirl sound interval exists:', !!whirlSoundInterval);
-                
+
                 // Ensure audio context is ready
                 if (!audioContext || audioContext.state === 'closed') {
                   console.log('🔍 Creating new audio context...');
@@ -799,15 +753,11 @@ export default function SpellPage() {
                     return;
                   }
                 }
-                
+
                 if (!isAnimating) {
                   console.log('🔍 === STARTING NEW CAROUSEL ===');
-                  
-                  // Start carousel
                   console.log('🔍 Starting sliding animation...');
                   startSlidingAnimation();
-                  
-                  // Start beat after a short delay to ensure audio context is ready
                   setTimeout(async () => {
                     console.log('🔍 Starting whirl sound...');
                     await startWhirlSound();
@@ -815,219 +765,159 @@ export default function SpellPage() {
                   }, 300);
                 } else {
                   console.log('🔍 === RESTARTING EXISTING CAROUSEL ===');
-                  // If carousel is already running, restart it
                   restartCarousel();
                   console.log('🔍 Restart completed');
                 }
                 console.log('🔍 ===== BUTTON CLICK COMPLETE =====');
               }}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform hover:scale-105 transition-all duration-200"
+              className="h-12 rounded-xl bg-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-indigo-600/25 transition-transform hover:bg-indigo-700 active:scale-[0.98] motion-reduce:transition-none"
             >
-              {isAnimating ? '🔄 Restart Carousel & Sound' : '🎠 Start Carousel & Sound'}
-            </button>
-            <div className="mt-2 text-sm text-gray-600">
-              {isAnimating 
-                ? 'Click to restart the carousel with whirling sound' 
-                : 'Click to start the carousel with whirling sound'
-              }
-            </div>
-          </div>
+              {isAnimating ? (
+                <>
+                  <RotateCw className="size-4" />
+                  Restart carousel
+                </>
+              ) : (
+                <>
+                  <Play className="size-4" />
+                  Start carousel
+                </>
+              )}
+            </Button>
 
-          {/* Audio Status */}
-          {audioContextReady && (
-            <div className="mb-4 text-center">
-              <div className="text-xs text-gray-500 mb-2">
+            {audioContextReady && (
+              <p
+                aria-live="polite"
+                className="flex items-center gap-2 text-sm text-slate-500"
+              >
                 {isBeatPlaying ? (
-                  <span className="text-green-600 font-bold animate-pulse">🔊 Beat is playing - you should hear sound!</span>
+                  <>
+                    <Volume2 className="size-4 text-emerald-600" />
+                    <span className="font-medium text-emerald-700">Beat playing</span>
+                  </>
                 ) : (
-                  <>Audio ready - click &quot;Start Carousel & Sound&quot; to begin</>
+                  <>
+                    <VolumeX className="size-4" />
+                    Audio ready
+                  </>
                 )}
-              </div>
-              
-            </div>
-          )}
-
-        </div>
-
-        {/* Main Content Area */}
-        <div className="w-full max-w-7xl mx-auto px-4 mb-2 sm:mb-3 md:mb-4 lg:mb-5 xl:mb-6 mt-4 sm:mt-6 md:mt-8 lg:mt-10 xl:mt-12">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-            
-            {/* Sliding Envelopes Container */}
-            <div className="flex-1">
-              <div className="envelope-container w-full max-w-6xl">
-                {!isAnimating ? (
-                  // Always show remaining envelopes when carousel is stopped
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="text-6xl mb-4">📦</div>
-                    <h3 className="text-3xl font-bold text-gray-800 mb-4">Remaining Envelopes</h3>
-                    <p className="text-xl text-gray-600 mb-6">
-                      {envelopes.filter(env => !env.isSelected).length} of {envelopes.length} packs available
-                    </p>
-                    
-                    {/* Show remaining envelopes */}
-                    <div className="flex flex-wrap justify-center gap-4 max-w-4xl">
-                      {envelopes.filter(env => !env.isSelected).map((envelope) => {
-                        const envelopeColors = [
-                          { bg: 'from-blue-500 to-blue-700', flap: 'from-blue-600 to-blue-800', shadow: 'shadow-blue-500/50' },
-                          { bg: 'from-purple-500 to-purple-700', flap: 'from-purple-600 to-purple-800', shadow: 'shadow-purple-500/50' },
-                          { bg: 'from-pink-500 to-pink-700', flap: 'from-pink-600 to-pink-800', shadow: 'shadow-pink-500/50' },
-                          { bg: 'from-orange-500 to-orange-700', flap: 'from-orange-600 to-orange-800', shadow: 'shadow-orange-500/50' },
-                          { bg: 'from-teal-500 to-teal-700', flap: 'from-teal-600 to-teal-800', shadow: 'shadow-teal-500/50' }
-                        ];
-                        const colorIndex = envelope.id - 1;
-                        const colors = envelopeColors[colorIndex % envelopeColors.length];
-                        
-                        return (
-                          <div key={envelope.id} className="flex flex-col items-center">
-                            <div className="w-20 h-24 sm:w-24 sm:h-28 md:w-28 md:h-32 relative transform hover:scale-105 transition-all duration-300 cursor-pointer"
-                                 onClick={() => selectEnvelope(envelope)}>
-                              {/* Envelope Body */}
-                              <div className={`absolute inset-0 rounded-xl lg:rounded-2xl shadow-xl bg-gradient-to-b ${colors.bg} hover:${colors.shadow} transition-all duration-300`}
-                                   style={{
-                                     background: `linear-gradient(135deg, ${colors.bg.includes('blue') ? '#3b82f6' : colors.bg.includes('purple') ? '#8b5cf6' : colors.bg.includes('pink') ? '#ec4899' : colors.bg.includes('orange') ? '#f97316' : '#14b8a6'}, ${colors.bg.includes('blue') ? '#1e40af' : colors.bg.includes('purple') ? '#7c3aed' : colors.bg.includes('pink') ? '#db2777' : colors.bg.includes('orange') ? '#ea580c' : '#0d9488'})`,
-                                     boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-                                   }}>
-                                
-                                {/* Envelope Flap */}
-                                <div className={`absolute top-0 left-0 w-full h-6 sm:h-8 md:h-10 transform -skew-y-1 origin-top rounded-t-xl lg:rounded-t-2xl`}
-                                     style={{
-                                       background: `linear-gradient(135deg, ${colors.flap.includes('blue') ? '#1e40af' : colors.flap.includes('purple') ? '#7c3aed' : colors.flap.includes('pink') ? '#db2777' : colors.flap.includes('orange') ? '#ea580c' : '#0d9488'}, ${colors.flap.includes('blue') ? '#1e3a8a' : colors.flap.includes('purple') ? '#6d28d9' : colors.flap.includes('pink') ? '#be185d' : colors.flap.includes('orange') ? '#c2410c' : '#0f766e'})`,
-                                       boxShadow: '0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                     }}>
-                                  {/* Flap Fold Line */}
-                                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
-                                </div>
-                      
-                                {/* Envelope Content */}
-                                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-4 sm:pt-6 md:pt-8">
-                                  <div className="text-lg sm:text-xl md:text-2xl mb-1 sm:mb-2 drop-shadow-lg">✉️</div>
-                                  <div className="text-white font-bold text-xs sm:text-sm md:text-base drop-shadow-lg text-center px-1">
-                                    {envelope.label}
-                                  </div>
-                                </div>
-                                
-                                {/* Envelope Edge Highlight */}
-                                <div className="absolute inset-0 rounded-xl lg:rounded-2xl border border-white/20 pointer-events-none"></div>
-                                
-                                {/* Bottom Shadow */}
-                                <div className="absolute -bottom-1 left-2 right-2 h-2 bg-black/10 rounded-b-xl lg:rounded-b-2xl blur-sm"></div>
-                              </div>
-                            </div>
-                            
-                            {/* Pack Label */}
-                            <div className="text-center mt-2 sm:mt-3">
-                              <div className="text-gray-800 font-semibold text-sm sm:text-base">
-                                {envelope.label}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    <div className="mt-8">
-                      <button
-                        onClick={restartCarousel}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-200 shadow-lg"
-                      >
-                        🔄 Restart Carousel
-                      </button>
-                    </div>
-                  </div>
-                ) : isAnimating ? (
-                  renderCarouselContent()
-                ) : null}
-              </div>
-            </div>
-
-            {/* Selected Envelopes Side Panel */}
-            {envelopes.some(env => env.isSelected) && (
-              <div className="lg:w-80 xl:w-96 flex-shrink-0">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-6 border-4 border-green-300 shadow-xl h-full">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">🎉</div>
-                    <h3 className="text-2xl font-bold text-green-800 mb-2">Selected Packs</h3>
-                    <p className="text-green-600 text-sm">
-                      {envelopes.filter(env => env.isSelected).length} of {envelopes.length} selected
-                    </p>
-                  </div>
-                  
-                  {/* Selected Envelopes Display */}
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {envelopes.filter(env => env.isSelected).map((envelope) => {
-                      const envelopeColors = [
-                        { bg: 'from-green-500 to-green-700', flap: 'from-green-600 to-green-800', shadow: 'shadow-green-500/50' },
-                        { bg: 'from-emerald-500 to-emerald-700', flap: 'from-emerald-600 to-emerald-800', shadow: 'shadow-emerald-500/50' },
-                        { bg: 'from-teal-500 to-teal-700', flap: 'from-teal-600 to-teal-800', shadow: 'shadow-teal-500/50' },
-                        { bg: 'from-cyan-500 to-cyan-700', flap: 'from-cyan-600 to-cyan-800', shadow: 'shadow-cyan-500/50' },
-                        { bg: 'from-lime-500 to-lime-700', flap: 'from-lime-600 to-lime-800', shadow: 'shadow-lime-500/50' }
-                      ];
-                      const colorIndex = envelope.id - 1;
-                      const colors = envelopeColors[colorIndex % envelopeColors.length];
-                      
-                      return (
-                        <div key={envelope.id} className="flex items-center space-x-3 p-3 bg-white/50 rounded-xl border border-white/30">
-                          {/* Selected Envelope */}
-                          <div className="w-12 h-16 relative flex-shrink-0">
-                            <div className={`absolute inset-0 rounded-lg shadow-lg bg-gradient-to-b ${colors.bg}`}
-                                 style={{
-                                   background: `linear-gradient(135deg, ${colors.bg.includes('green') ? '#10b981' : colors.bg.includes('emerald') ? '#059669' : colors.bg.includes('teal') ? '#14b8a6' : colors.bg.includes('cyan') ? '#06b6d4' : '#84cc16'}, ${colors.bg.includes('green') ? '#047857' : colors.bg.includes('emerald') ? '#047857' : colors.bg.includes('teal') ? '#0d9488' : colors.bg.includes('cyan') ? '#0891b2' : '#65a30d'})`,
-                                   boxShadow: '0 8px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)'
-                                 }}>
-                              
-                              {/* Envelope Flap */}
-                              <div className={`absolute top-0 left-0 w-full h-3 transform -skew-y-1 origin-top rounded-t-lg`}
-                                   style={{
-                                     background: `linear-gradient(135deg, ${colors.flap.includes('green') ? '#047857' : colors.flap.includes('emerald') ? '#047857' : colors.flap.includes('teal') ? '#0d9488' : colors.flap.includes('cyan') ? '#0891b2' : '#65a30d'}, ${colors.flap.includes('green') ? '#065f46' : colors.flap.includes('emerald') ? '#065f46' : colors.flap.includes('teal') ? '#0f766e' : colors.flap.includes('cyan') ? '#0e7490' : '#4d7c0f'})`,
-                                     boxShadow: '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                   }}>
-                                {/* Flap Fold Line */}
-                                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-black/20"></div>
-                              </div>
-                    
-                              {/* Envelope Content */}
-                              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-3">
-                                <div className="text-xs drop-shadow-lg">✉️</div>
-                              </div>
-                              
-                              {/* Envelope Edge Highlight */}
-                              <div className="absolute inset-0 rounded-lg border border-white/20 pointer-events-none"></div>
-                              
-                              {/* Bottom Shadow */}
-                              <div className="absolute -bottom-0.5 left-1 right-1 h-1 bg-black/10 rounded-b-lg blur-sm"></div>
-                            </div>
-                          </div>
-                          
-                          {/* Pack Label */}
-                          <div className="flex-1">
-                            <div className="text-gray-800 font-semibold text-sm">
-                              {envelope.label}
-                            </div>
-                            <div className="text-green-600 text-xs">
-                              Selected
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Restart Button */}
-                  <div className="mt-6 pt-4 border-t border-green-200">
-                    <button
-                      onClick={restartCarousel}
-                      className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-full transition-all duration-200 shadow-lg w-full text-sm"
-                    >
-                      🔄 Select Another Pack
-                    </button>
-                  </div>
-                </div>
-              </div>
+              </p>
             )}
           </div>
         </div>
-      </div>
+
+        {/* Stage + selected list */}
+        <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-6 sm:p-8">
+            <div className={isAnimating ? 'envelope-container w-full' : 'w-full'}>
+              {isAnimating ? (
+                renderCarouselContent()
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  {remaining.length > 0 ? (
+                    <>
+                      <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                        {remaining.length} {remaining.length === 1 ? 'envelope' : 'envelopes'} left
+                      </h2>
+                      <p className="mt-2 text-slate-600">
+                        Start the carousel, or pick one straight from here.
+                      </p>
+
+                      <div className="mt-8 flex flex-wrap justify-center gap-4">
+                        {remaining.map((envelope) => (
+                          <div key={envelope.id} className="flex flex-col items-center gap-3">
+                            <SpellEnvelope
+                              label={envelope.label}
+                              toneIndex={envelope.id - 1}
+                              size="md"
+                              onSelect={() => selectEnvelope(envelope)}
+                            />
+                            <span className="text-sm font-semibold text-slate-700">
+                              {envelope.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="grid size-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+                        <PartyPopper className="size-8" />
+                      </span>
+                      <h2 className="mt-5 text-xl font-bold text-slate-900 sm:text-2xl">
+                        Every pack is open
+                      </h2>
+                      <p className="mt-2 text-slate-600">
+                        Restart to shuffle them back in.
+                      </p>
+                    </>
+                  )}
+
+                  <Button
+                    onClick={restartCarousel}
+                    variant="outline"
+                    className="mt-8 h-11 rounded-xl border-slate-300 px-6 font-semibold"
+                  >
+                    <RotateCw className="size-4" />
+                    Restart carousel
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Opened packs */}
+          <aside className="rounded-2xl border border-slate-200 bg-white p-6">
+            <h2 className="text-lg font-semibold">Opened packs</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {selectedCount === 0
+                ? 'Nothing opened yet.'
+                : `${selectedCount} of ${envelopes.length} claimed.`}
+            </p>
+
+            {selectedPack && (
+              <p className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-800">
+                Latest: {selectedPack.label}
+              </p>
+            )}
+
+            <ul className="mt-5 space-y-3">
+              {envelopes
+                .filter((env) => env.isSelected)
+                .map((envelope) => (
+                  <li
+                    key={envelope.id}
+                    className="flex items-center gap-3 rounded-xl border border-slate-200 p-3"
+                  >
+                    <SpellEnvelope
+                      label={envelope.label}
+                      toneIndex={envelope.id - 1}
+                      size="sm"
+                      asStatic
+                    />
+                    <div className="min-w-0">
+                      <p className="font-semibold">{envelope.label}</p>
+                      <p className="text-sm text-emerald-700">Opened</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => selectEnvelope(envelope)}
+                      className="ml-auto rounded-lg px-2 py-1 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      Undo
+                    </button>
+                  </li>
+                ))}
+            </ul>
+
+            {selectedCount === 0 && (
+              <p className="mt-5 rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-400">
+                Opened envelopes collect here.
+              </p>
+            )}
+          </aside>
+        </div>
+      </main>
     </div>
   );
 }

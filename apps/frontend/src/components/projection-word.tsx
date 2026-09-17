@@ -29,6 +29,7 @@ export function ProjectionWord({
 }: ProjectionWordProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
+  const baseFontSize = `clamp(2.5rem, ${maxVw}vw, 16rem)`;
 
   useLayoutEffect(() => {
     const box = boxRef.current;
@@ -36,8 +37,10 @@ export function ProjectionWord({
     if (!box || !span) return;
 
     const fit = () => {
-      // Clear any previous correction so we always measure the base size.
-      span.style.fontSize = '';
+      // Re-apply the base size rather than clearing it: the clamp lives on this
+      // same inline style attribute, so blanking it would drop to the inherited
+      // font size and we would scale down from 16px instead of from the cap.
+      span.style.fontSize = baseFontSize;
       const available = box.clientWidth * fill;
       const measured = span.getBoundingClientRect().width;
       if (measured > available && measured > 0) {
@@ -52,14 +55,14 @@ export function ProjectionWord({
     const observer = new ResizeObserver(fit);
     observer.observe(box);
     return () => observer.disconnect();
-  }, [text, maxVw, fill]);
+  }, [text, baseFontSize, fill]);
 
   return (
     <div ref={boxRef} className="w-full overflow-hidden text-center">
       <span
         ref={textRef}
         className={`inline-block leading-none font-black tracking-[0.08em] whitespace-nowrap ${className}`}
-        style={{ fontSize: `clamp(2.5rem, ${maxVw}vw, 16rem)` }}
+        style={{ fontSize: baseFontSize }}
       >
         {text}
       </span>

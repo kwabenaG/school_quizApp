@@ -878,20 +878,20 @@ export default function QuizMasterPage() {
   if (projectionMode && currentWord) {
     const outOfTime = timeSpent >= timeLimit;
 
-    const timerTone = !timerStarted
-      ? 'border-slate-300 bg-slate-100 text-slate-700'
-      : outOfTime
-        ? 'border-red-600 bg-red-600 text-white'
+    // Out of time wins over every other state: the timer stops when it expires,
+    // so checking timerStarted first would paint the alarm state calm grey.
+    const timerTone = outOfTime
+      ? 'border-red-700 bg-red-600 text-white'
+      : !timerStarted
+        ? 'border-slate-300 bg-slate-100 text-slate-700'
         : timerPaused
           ? 'border-amber-500 bg-amber-100 text-amber-900'
           : 'border-slate-900 bg-white text-slate-900';
 
-    const timerLabel = !timerStarted
-      ? outOfTime
-        ? "Time's up"
-        : 'Ready'
-      : outOfTime
-        ? "Time's up"
+    const timerLabel = outOfTime
+      ? "Time's up"
+      : !timerStarted
+        ? 'Ready'
         : timerPaused
           ? `Paused ${formatTime(timeSpent)}`
           : formatTime(timeSpent);
@@ -1314,6 +1314,14 @@ export default function QuizMasterPage() {
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 text-sm sm:text-base lg:text-lg rounded-lg sm:rounded-xl"
             >
               Next Word
+            </Button>
+            {/* Projection mode had no way in: toggleProjection was only wired to
+                the Exit button, which renders only once you are already in it. */}
+            <Button 
+              onClick={toggleProjection}
+              className="bg-slate-900 hover:bg-slate-800 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 text-sm sm:text-base lg:text-lg rounded-lg sm:rounded-xl"
+            >
+              Project to screen
             </Button>
           </div>
         </div>

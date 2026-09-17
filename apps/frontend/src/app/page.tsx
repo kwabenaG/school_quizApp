@@ -1,186 +1,320 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
+import {
+  ArrowRight,
+  ChartColumnIncreasing,
+  MonitorPlay,
+  KeyRound,
+  Lightbulb,
+  ListChecks,
+  Shuffle,
+  Sparkles,
+  Timer,
+  Trophy,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { JoinForm } from '@/components/landing/join-form';
+import { Reveal } from '@/components/landing/reveal';
+import { ScrabbleTiles } from '@/components/landing/scrabble-tiles';
+
+const PLAYER_PERKS = [
+  {
+    icon: Lightbulb,
+    title: 'Clues when you need them',
+    body: 'Every word comes with hints, so you are never staring at a dead end.',
+  },
+  {
+    icon: Timer,
+    title: 'Beat your own clock',
+    body: 'A live timer runs on each word. Solve it faster than you did last time.',
+  },
+  {
+    icon: Trophy,
+    title: 'Know instantly',
+    body: 'Submit an answer and find out right away whether you nailed it.',
+  },
+];
+
+const STEPS = [
+  {
+    icon: KeyRound,
+    title: 'Enter the code',
+    body: 'Your teacher shares a session code. Type it in with your name.',
+  },
+  {
+    icon: Shuffle,
+    title: 'Unscramble the word',
+    body: 'Letters arrive jumbled. Read the clue and work out the real word.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Lock in your answer',
+    body: 'Submit, see if you are right, and roll straight on to the next word.',
+  },
+];
+
+const TEACHER_TOOLS = [
+  {
+    icon: ListChecks,
+    title: 'Build your word list',
+    body: 'Add words with clues and difficulty levels, or import them in bulk.',
+  },
+  {
+    icon: MonitorPlay,
+    title: 'Run the room',
+    body: 'Open a session, share the code, and drive the pace from one screen.',
+  },
+  {
+    icon: ChartColumnIncreasing,
+    title: 'See who is getting it',
+    body: 'Watch answers, accuracy and timings land as the round plays out.',
+  },
+];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Header */}
-      <header className="container mx-auto px-4 py-4 sm:py-6">
-        <nav className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">🎓</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">School Quiz</h1>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-4 justify-center">
-            <Link href="/quiz-master">
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm">Quiz Master</Button>
+      <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/80">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-lg bg-indigo-600 text-lg font-bold text-white shadow-md shadow-indigo-600/25">
+              S
+            </span>
+            <span className="text-lg font-bold tracking-tight">School Quiz</span>
+          </Link>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link
+              href="/quiz-master"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              Quiz Master
             </Link>
-            <Link href="/spell">
-              <Button variant="outline" size="sm" className="text-xs sm:text-sm">Spell Challenge</Button>
+            <Link
+              href="/admin"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              Admin
             </Link>
-            <Link href="/admin">
-              <Button className="bg-blue-800 text-white hover:bg-gray-800 text-xs sm:text-sm" variant="secondary" size="sm">Admin</Button>
+            <Link href="/start">
+              <Button className="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700">
+                Play now
+              </Button>
             </Link>
           </div>
         </nav>
       </header>
 
-      {/* Hero Section */}
-      <main className="container mx-auto px-4 py-8 sm:py-12">
-        <div className="text-center mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
-            Interactive Word Quiz
-            <span className="block text-2xl sm:text-3xl md:text-4xl text-blue-600 dark:text-blue-400 mt-2">
-              for Junior School Students
-            </span>
-          </h2>
-          <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto px-4">
-            Challenge your students with fun, educational word puzzles! Teachers can create and manage 
-            scrabble-style quizzes while students guess scrambled words with helpful clues.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-2xl mx-auto">
-            <Link href="/quiz-master">
-              <Button size="lg" className="w-full sm:w-auto text-sm sm:text-base">
-                🎯 Quiz Master Control
-              </Button>
-            </Link>
-            <Link href="/spell">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
-                ✉️ Spell Challenge
-              </Button>
-            </Link>
-            <Link href="/start">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
-                🎮 Practice Mode
-              </Button>
-            </Link>
+      <main>
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          {/* Ambient glow */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 -top-40 h-[32rem] bg-[radial-gradient(60%_60%_at_50%_0%,var(--color-indigo-200)_0%,transparent_70%)] opacity-70 dark:bg-[radial-gradient(60%_60%_at_50%_0%,var(--color-indigo-600)_0%,transparent_70%)] dark:opacity-25"
+          />
+
+          <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-20 sm:px-6 sm:pt-20 sm:pb-28">
+            <Reveal className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-indigo-700 uppercase dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300">
+                <Sparkles className="size-3.5" />
+                Word game for junior school
+              </span>
+
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">
+                Unscramble the word.
+                <span className="block text-indigo-600 dark:text-indigo-400">
+                  Beat the clock.
+                </span>
+              </h1>
+
+              <p className="mx-auto mt-5 max-w-xl text-lg text-pretty text-slate-600 sm:text-xl dark:text-slate-300">
+                Jumbled letters, a helpful clue, and a timer counting up. Get a code
+                from your teacher and see how fast you can solve it.
+              </p>
+            </Reveal>
+
+            <Reveal delay={120} className="mt-12">
+              <ScrabbleTiles />
+            </Reveal>
+
+            <Reveal delay={220} className="mx-auto mt-12 max-w-2xl">
+              <JoinForm />
+            </Reveal>
           </div>
-        </div>
+        </section>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
-          <Card className="text-center">
-            <CardHeader className="p-4 sm:p-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <span className="text-2xl sm:text-3xl">📝</span>
-              </div>
-              <CardTitle className="text-lg sm:text-xl">Easy Word Management</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                Teachers can easily add, edit, and organize words with clues and difficulty levels
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        {/* How a round works */}
+        <section className="border-y border-slate-200/70 bg-slate-50/60 dark:border-white/10 dark:bg-white/[0.02]">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                A round takes about a minute
+              </h2>
+              <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
+                Three steps, then you are playing.
+              </p>
+            </Reveal>
 
-          <Card className="text-center">
-            <CardHeader className="p-4 sm:p-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <span className="text-2xl sm:text-3xl">🎲</span>
-              </div>
-              <CardTitle className="text-lg sm:text-xl">Smart Word Scrambling</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                Advanced algorithm scrambles words differently each time for varied challenges
-              </CardDescription>
-            </CardHeader>
-          </Card>
+            <ol className="mt-14 grid gap-6 sm:grid-cols-3">
+              {STEPS.map((step, i) => (
+                <Reveal key={step.title} delay={i * 110}>
+                  <li className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-white/10 dark:bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-10 place-items-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/25">
+                        <step.icon className="size-5" />
+                      </span>
+                      <span className="font-mono text-sm font-semibold text-slate-400 tabular-nums">
+                        0{i + 1}
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">{step.body}</p>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </section>
 
-          <Card className="text-center sm:col-span-2 lg:col-span-1">
-            <CardHeader className="p-4 sm:p-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <span className="text-2xl sm:text-3xl">📊</span>
-              </div>
-              <CardTitle className="text-lg sm:text-xl">Real-time Analytics</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                Track student progress, accuracy rates, and quiz performance in real-time
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+        {/* What players get */}
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+              Built so you keep going
+            </h2>
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
+              No dead ends, no waiting to find out how you did.
+            </p>
+          </Reveal>
 
-        {/* How it Works */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 shadow-lg">
-          <h3 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-gray-900 dark:text-white">
-            How It Works
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 font-bold text-base sm:text-lg">
-                1
+          <div className="mt-14 grid gap-6 sm:grid-cols-3">
+            {PLAYER_PERKS.map((perk, i) => (
+              <Reveal key={perk.title} delay={i * 110}>
+                <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/5">
+                  <span className="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                    <perk.icon className="size-5" />
+                  </span>
+                  <h3 className="mt-5 text-lg font-semibold">{perk.title}</h3>
+                  <p className="mt-2 text-slate-600 dark:text-slate-300">{perk.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* Teachers - deliberately secondary */}
+        <section className="border-t border-slate-200/70 bg-slate-50/60 dark:border-white/10 dark:bg-white/[0.02]">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+            <div className="grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+              <Reveal>
+                <span className="text-xs font-semibold tracking-widest text-indigo-600 uppercase dark:text-indigo-400">
+                  For teachers
+                </span>
+                <h2 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                  You run the round from one screen
+                </h2>
+                <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
+                  Set up the words ahead of the lesson, then open a session and read
+                  the room as answers come in.
+                </p>
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <Link href="/admin">
+                    <Button className="h-11 w-full rounded-xl bg-slate-900 px-6 font-semibold text-white hover:bg-slate-800 sm:w-auto dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                      Manage words
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/quiz-master">
+                    <Button
+                      variant="outline"
+                      className="h-11 w-full rounded-xl border-slate-300 px-6 font-semibold sm:w-auto dark:border-white/20"
+                    >
+                      Open Quiz Master
+                    </Button>
+                  </Link>
+                </div>
+              </Reveal>
+
+              <div className="grid gap-4">
+                {TEACHER_TOOLS.map((tool, i) => (
+                  <Reveal key={tool.title} delay={i * 110}>
+                    <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                        <tool.icon className="size-5" />
+                      </span>
+                      <div>
+                        <h3 className="font-semibold">{tool.title}</h3>
+                        <p className="mt-1 text-slate-600 dark:text-slate-300">
+                          {tool.body}
+                        </p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
               </div>
-              <h4 className="font-semibold mb-2 text-sm sm:text-base">Teacher Creates Quiz</h4>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                Add words with clues and set difficulty levels
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 font-bold text-base sm:text-lg">
-                2
-              </div>
-              <h4 className="font-semibold mb-2 text-sm sm:text-base">Start Session</h4>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                Launch quiz and share session code with students
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 font-bold text-base sm:text-lg">
-                3
-              </div>
-              <h4 className="font-semibold mb-2 text-sm sm:text-base">Students Play</h4>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                Guess scrambled words using provided clues
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 font-bold text-base sm:text-lg">
-                4
-              </div>
-              <h4 className="font-semibold mb-2 text-sm sm:text-base">Track Progress</h4>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                Monitor results and celebrate achievements
-              </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* CTA Section */}
-        <div className="text-center mt-12 sm:mt-16">
-          <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-900 dark:text-white">
-            Ready to Start Your First Quiz?
-          </h3>
-          <p className="text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 text-sm sm:text-base">
-            Join thousands of teachers making learning fun and interactive
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md mx-auto">
-            <Link href="/admin">
-              <Button size="lg" className="w-full sm:w-auto text-sm sm:text-base">
-                Create Your First Quiz
-              </Button>
-            </Link>
-            <Link href="/start">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm sm:text-base">
-                Try Demo Quiz
-              </Button>
-            </Link>
-          </div>
-        </div>
+        {/* Closing CTA */}
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
+          <Reveal>
+            <div className="relative overflow-hidden rounded-3xl bg-indigo-600 px-6 py-14 text-center shadow-2xl shadow-indigo-600/20 sm:px-12 sm:py-20">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_60%_at_50%_0%,rgba(255,255,255,0.22)_0%,transparent_70%)]"
+              />
+              <div className="relative">
+                <h2 className="text-3xl font-bold tracking-tight text-balance text-white sm:text-4xl">
+                  Ready for your first word?
+                </h2>
+                <p className="mx-auto mt-4 max-w-md text-lg text-pretty text-indigo-100">
+                  Try a practice round right now - no code, no sign-up.
+                </p>
+                <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Link href="/start">
+                    <Button className="h-12 w-full rounded-xl bg-white px-8 text-base font-semibold text-indigo-700 shadow-lg hover:bg-indigo-50 sm:w-auto">
+                      Start practising
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/spell">
+                    <Button
+                      variant="outline"
+                      className="h-12 w-full rounded-xl border-white/35 bg-transparent px-8 text-base font-semibold text-white hover:bg-white/10 hover:text-white sm:w-auto dark:bg-transparent"
+                    >
+                      Try Spell Challenge
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-50 dark:bg-gray-900 mt-12 sm:mt-16">
-        <div className="container mx-auto px-4 py-6 sm:py-8">
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded flex items-center justify-center">
-                <span className="text-white text-sm">🎓</span>
-              </div>
-              <span className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">School Quiz Platform</span>
-            </div>
-            <div className="flex space-x-4 sm:space-x-6">
-              <Badge variant="secondary" className="text-xs sm:text-sm">Made with ❤️ for Education</Badge>
-            </div>
+      <footer className="border-t border-slate-200/70 dark:border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-7 place-items-center rounded-md bg-indigo-600 text-sm font-bold text-white">
+              S
+            </span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+              School Quiz Platform
+            </span>
+          </div>
+          <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+            <Link href="/start" className="transition-colors hover:text-slate-900 dark:hover:text-white">
+              Play
+            </Link>
+            <Link href="/quiz-master" className="transition-colors hover:text-slate-900 dark:hover:text-white">
+              Quiz Master
+            </Link>
+            <Link href="/admin" className="transition-colors hover:text-slate-900 dark:hover:text-white">
+              Admin
+            </Link>
           </div>
         </div>
       </footer>

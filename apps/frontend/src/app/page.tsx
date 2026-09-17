@@ -2,71 +2,51 @@ import Link from 'next/link';
 import {
   ArrowRight,
   ChartColumnIncreasing,
-  MonitorPlay,
-  KeyRound,
-  Lightbulb,
+  Eye,
   ListChecks,
+  MonitorPlay,
+  Presentation,
   Shuffle,
   Sparkles,
   Timer,
-  Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { JoinForm } from '@/components/landing/join-form';
 import { Reveal } from '@/components/landing/reveal';
 import { ScrabbleTiles } from '@/components/landing/scrabble-tiles';
 
-const PLAYER_PERKS = [
+const LESSON_STEPS = [
   {
-    icon: Lightbulb,
-    title: 'Clues when you need them',
-    body: 'Every word comes with hints, so you are never staring at a dead end.',
+    icon: ListChecks,
+    title: 'Load your words',
+    body: 'Add words with clues and difficulty levels before the lesson, or import a list in bulk.',
+  },
+  {
+    icon: Presentation,
+    title: 'Project the round',
+    body: 'Switch to projection mode and the scrambled word fills the screen for the whole room.',
+  },
+  {
+    icon: Eye,
+    title: 'Reveal on your cue',
+    body: 'The class works it out against the clock. You reveal the answer when they are ready.',
+  },
+];
+
+const ROOM_FEATURES = [
+  {
+    icon: MonitorPlay,
+    title: 'Made for the projector',
+    body: 'Full-screen display sized to be read from the back row, with the timer always in view.',
   },
   {
     icon: Timer,
-    title: 'Beat your own clock',
-    body: 'A live timer runs on each word. Solve it faster than you did last time.',
-  },
-  {
-    icon: Trophy,
-    title: 'Know instantly',
-    body: 'Submit an answer and find out right away whether you nailed it.',
-  },
-];
-
-const STEPS = [
-  {
-    icon: KeyRound,
-    title: 'Enter the session ID',
-    body: 'Your teacher shares a session ID. Paste it in with your name.',
+    title: 'A clock the room can see',
+    body: 'A countdown runs beside the word, so everyone knows how long is left on it.',
   },
   {
     icon: Shuffle,
-    title: 'Unscramble the word',
-    body: 'Letters arrive jumbled. Read the clue and work out the real word.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Lock in your answer',
-    body: 'Submit, see if you are right, and roll straight on to the next word.',
-  },
-];
-
-const TEACHER_TOOLS = [
-  {
-    icon: ListChecks,
-    title: 'Build your word list',
-    body: 'Add words with clues and difficulty levels, or import them in bulk.',
-  },
-  {
-    icon: MonitorPlay,
-    title: 'Run the room',
-    body: 'Open a session, share the code, and drive the pace from one screen.',
-  },
-  {
-    icon: ChartColumnIncreasing,
-    title: 'See who is getting it',
-    body: 'Watch answers, accuracy and timings land as the round plays out.',
+    title: 'Fresh scramble every time',
+    body: 'Words are jumbled differently on each run, so the same list stays useful across classes.',
   },
 ];
 
@@ -85,20 +65,20 @@ export default function Home() {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <Link
-              href="/quiz-master"
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              Quiz Master
-            </Link>
-            <Link
               href="/admin"
               className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
             >
-              Admin
+              Words
             </Link>
-            <Link href="/start">
+            <Link
+              href="/spell"
+              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:block dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              Spell Challenge
+            </Link>
+            <Link href="/quiz-master">
               <Button className="h-9 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700">
-                Play now
+                Start a session
               </Button>
             </Link>
           </div>
@@ -108,7 +88,6 @@ export default function Home() {
       <main>
         {/* Hero */}
         <section className="relative overflow-hidden">
-          {/* Ambient glow */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 -top-40 h-[32rem] bg-[radial-gradient(60%_60%_at_50%_0%,var(--color-indigo-200)_0%,transparent_70%)] opacity-70 dark:bg-[radial-gradient(60%_60%_at_50%_0%,var(--color-indigo-600)_0%,transparent_70%)] dark:opacity-25"
@@ -118,46 +97,59 @@ export default function Home() {
             <Reveal className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-semibold tracking-wide text-indigo-700 uppercase dark:border-indigo-400/25 dark:bg-indigo-500/10 dark:text-indigo-300">
                 <Sparkles className="size-3.5" />
-                Word game for junior school
+                Word game for the whole class
               </span>
 
               <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">
-                Unscramble the word.
+                Put the word on the wall.
                 <span className="block text-indigo-600 dark:text-indigo-400">
-                  Beat the clock.
+                  Let the class crack it.
                 </span>
               </h1>
 
               <p className="mx-auto mt-5 max-w-xl text-lg text-pretty text-slate-600 sm:text-xl dark:text-slate-300">
-                Jumbled letters, a helpful clue, and a timer counting up. Get a
-                session ID from your teacher and see how fast you can solve it.
+                Project a scrambled word, start the clock, and reveal the answer when
+                the room is ready. You run it all from one screen.
               </p>
+
+              <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+                <Link href="/quiz-master">
+                  <Button className="h-12 w-full rounded-xl bg-indigo-600 px-8 text-base font-semibold text-white shadow-lg shadow-indigo-600/25 transition-transform hover:bg-indigo-700 active:scale-[0.98] sm:w-auto motion-reduce:transition-none">
+                    Start a session
+                    <ArrowRight className="size-4" />
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button
+                    variant="outline"
+                    className="h-12 w-full rounded-xl border-slate-300 px-8 text-base font-semibold sm:w-auto dark:border-white/20"
+                  >
+                    Manage words
+                  </Button>
+                </Link>
+              </div>
             </Reveal>
 
-            <Reveal delay={120} className="mt-12">
+            <Reveal delay={160} className="mt-16">
               <ScrabbleTiles />
-            </Reveal>
-
-            <Reveal delay={220} className="mx-auto mt-12 max-w-2xl">
-              <JoinForm />
             </Reveal>
           </div>
         </section>
 
-        {/* How a round works */}
+        {/* How a lesson runs */}
         <section className="border-y border-slate-200/70 bg-slate-50/60 dark:border-white/10 dark:bg-white/[0.02]">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
             <Reveal className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-                A round takes about a minute
+                How a lesson runs
               </h2>
               <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-                Three steps, then you are playing.
+                Three steps from a word list to a room full of hands up.
               </p>
             </Reveal>
 
             <ol className="mt-14 grid gap-6 sm:grid-cols-3">
-              {STEPS.map((step, i) => (
+              {LESSON_STEPS.map((step, i) => (
                 <Reveal key={step.title} delay={i * 110}>
                   <li className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-white/10 dark:bg-white/5">
                     <div className="flex items-center gap-3">
@@ -177,81 +169,84 @@ export default function Home() {
           </div>
         </section>
 
-        {/* What players get */}
+        {/* Built for the front of the room */}
         <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
           <Reveal className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-              Built so you keep going
+              Built for the front of the room
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-              No dead ends, no waiting to find out how you did.
+              Everything sized and paced for a projector and thirty pairs of eyes.
             </p>
           </Reveal>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-3">
-            {PLAYER_PERKS.map((perk, i) => (
-              <Reveal key={perk.title} delay={i * 110}>
+            {ROOM_FEATURES.map((feature, i) => (
+              <Reveal key={feature.title} delay={i * 110}>
                 <div className="h-full rounded-2xl border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-white/5">
                   <span className="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                    <perk.icon className="size-5" />
+                    <feature.icon className="size-5" />
                   </span>
-                  <h3 className="mt-5 text-lg font-semibold">{perk.title}</h3>
-                  <p className="mt-2 text-slate-600 dark:text-slate-300">{perk.body}</p>
+                  <h3 className="mt-5 text-lg font-semibold">{feature.title}</h3>
+                  <p className="mt-2 text-slate-600 dark:text-slate-300">{feature.body}</p>
                 </div>
               </Reveal>
             ))}
           </div>
         </section>
 
-        {/* Teachers - deliberately secondary */}
+        {/* Prep and results */}
         <section className="border-t border-slate-200/70 bg-slate-50/60 dark:border-white/10 dark:bg-white/[0.02]">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-            <div className="grid items-start gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+            <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
               <Reveal>
                 <span className="text-xs font-semibold tracking-widest text-indigo-600 uppercase dark:text-indigo-400">
-                  For teachers
+                  Before and after
                 </span>
                 <h2 className="mt-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-                  You run the round from one screen
+                  Prep once, reuse all term
                 </h2>
                 <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-                  Set up the words ahead of the lesson, then open a session and read
-                  the room as answers come in.
+                  Build the word bank ahead of time and it is ready whenever you need a
+                  starter or a filler. Afterwards, see how the round actually went.
                 </p>
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-8">
                   <Link href="/admin">
-                    <Button className="h-11 w-full rounded-xl bg-slate-900 px-6 font-semibold text-white hover:bg-slate-800 sm:w-auto dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-                      Manage words
+                    <Button className="h-11 rounded-xl bg-slate-900 px-6 font-semibold text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                      Open the word bank
                       <ArrowRight className="size-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/quiz-master">
-                    <Button
-                      variant="outline"
-                      className="h-11 w-full rounded-xl border-slate-300 px-6 font-semibold sm:w-auto dark:border-white/20"
-                    >
-                      Open Quiz Master
                     </Button>
                   </Link>
                 </div>
               </Reveal>
 
               <div className="grid gap-4">
-                {TEACHER_TOOLS.map((tool, i) => (
-                  <Reveal key={tool.title} delay={i * 110}>
-                    <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200">
-                        <tool.icon className="size-5" />
-                      </span>
-                      <div>
-                        <h3 className="font-semibold">{tool.title}</h3>
-                        <p className="mt-1 text-slate-600 dark:text-slate-300">
-                          {tool.body}
-                        </p>
-                      </div>
+                <Reveal delay={110}>
+                  <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                      <ListChecks className="size-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold">Words, clues and difficulty</h3>
+                      <p className="mt-1 text-slate-600 dark:text-slate-300">
+                        Set up each word with its own clues, or import a whole list at once.
+                      </p>
                     </div>
-                  </Reveal>
-                ))}
+                  </div>
+                </Reveal>
+                <Reveal delay={220}>
+                  <div className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/5">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                      <ChartColumnIncreasing className="size-5" />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold">How the round went</h3>
+                      <p className="mt-1 text-slate-600 dark:text-slate-300">
+                        Accuracy and timings per word, so you know what to revisit.
+                      </p>
+                    </div>
+                  </div>
+                </Reveal>
               </div>
             </div>
           </div>
@@ -267,15 +262,15 @@ export default function Home() {
               />
               <div className="relative">
                 <h2 className="text-3xl font-bold tracking-tight text-balance text-white sm:text-4xl">
-                  Ready for your first word?
+                  Ready to run your first round?
                 </h2>
                 <p className="mx-auto mt-4 max-w-md text-lg text-pretty text-indigo-100">
-                  Try a practice round right now - no code, no sign-up.
+                  Open Quiz Master, pick a word, and put it on the wall.
                 </p>
                 <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Link href="/start">
+                  <Link href="/quiz-master">
                     <Button className="h-12 w-full rounded-xl bg-white px-8 text-base font-semibold text-indigo-700 shadow-lg hover:bg-indigo-50 sm:w-auto">
-                      Start practising
+                      Start a session
                       <ArrowRight className="size-4" />
                     </Button>
                   </Link>
@@ -306,14 +301,14 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
-            <Link href="/start" className="transition-colors hover:text-slate-900 dark:hover:text-white">
-              Play
-            </Link>
             <Link href="/quiz-master" className="transition-colors hover:text-slate-900 dark:hover:text-white">
               Quiz Master
             </Link>
             <Link href="/admin" className="transition-colors hover:text-slate-900 dark:hover:text-white">
-              Admin
+              Words
+            </Link>
+            <Link href="/start" className="transition-colors hover:text-slate-900 dark:hover:text-white">
+              Practice
             </Link>
           </div>
         </div>

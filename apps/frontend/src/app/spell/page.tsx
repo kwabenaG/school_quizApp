@@ -208,11 +208,65 @@ export default function SpellPage() {
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const whirlRef = useRef<{
-    osc: OscillatorNode;
-    lfo: OscillatorNode;
-    gain: GainNode;
-  } | null>(null);
+  /**
+   * The carousel sound is one wind pass per envelope rather than a held tone.
+   *
+   * A whoosh is filtered noise, not an oscillator: white noise swept through a
+   * bandpass with a volume envelope. Each pass is shorter than the 2s slot, so
+   * they never overlap — which is what wrecked the original, where 500ms notes
+   * fired every 200ms and summed past full scale.
+   */
+  const soundOnRef = useRef(false);
+  const noiseBufferRef = useRef<AudioBuffer | null>(null);
+
+  const getNoiseBuffer = (ctx: AudioContext) => {
+    if (noiseBufferRef.current) return noiseBufferRef.current;
+    const length = Math.floor(ctx.sampleRate * 0.8);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i += 1) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    noiseBufferRef.current = buffer;
+    return buffer;
+  };
+
+  /** One envelope going past. */
+  const playWhoosh = () => {
+    const ctx = audioContext;
+    if (!ctx || ctx.state === 'closed') return;
+
+    // A context can still be suspended for the first pass or two after the
+    // click that created it. Bailing out on anything but 'running' left the
+    // opening envelopes silent, so nudge it and play regardless.
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    const duration = 0.6;
+
+    const source = ctx.createBufferSource();
+    source.buffer = getNoiseBuffer(ctx);
+    source.loop = true;
+
+    // Sweeping the passband up then down is what reads as movement.
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.Q.setValueAtTime(0.9, now);
+    band.frequency.setValueAtTime(320, now);
+    band.frequency.exponentialRampToValueAtTime(1900, now + duration * 0.45);
+    band.frequency.exponentialRampToValueAtTime(300, now + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + duration * 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    source.connect(band).connect(gain).connect(ctx.destination);
+    source.start(now);
+    source.stop(now + duration + 0.02);
+  };
 
   // Function to play selection sound
   const playSelectionSound = () => {
@@ -276,7 +330,7 @@ export default function SpellPage() {
     // Idempotent on purpose. The effect that calls this re-runs on most
     // renders, and the carousel re-renders constantly while spinning, so
     // tearing the whirl down and rebuilding it each time made it stutter.
-    if (whirlRef.current) {
+    if (soundOnRef.current) {
       return;
     }
     
@@ -317,71 +371,34 @@ export default function SpellPage() {
     startWhirlSoundLoop();
   };
 
-  // Start the continuous whirl
+  // Arm the carousel sound. Each envelope pass plays its own whoosh, driven
+  // by the effect on currentEnvelopeIndex below.
   const startWhirlSoundLoop = () => {
     const ctx = audioContext;
     if (!ctx || ctx.state === 'closed') {
-      console.log('🔍 ❌ Cannot start whirl - no valid audio context');
+      console.log('🔍 ❌ Cannot start carousel sound - no valid audio context');
       return;
     }
 
-    const osc = ctx.createOscillator();
-    const lfo = ctx.createOscillator();
-    const lfoDepth = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    const gain = ctx.createGain();
-
-    // Tone: a triangle sits between a harsh saw and a bare sine.
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(230, ctx.currentTime);
-
-    // The wobble that makes it read as spinning rather than beeping.
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(5.5, ctx.currentTime);
-    lfoDepth.gain.setValueAtTime(55, ctx.currentTime);
-    lfo.connect(lfoDepth).connect(osc.frequency);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1100, ctx.currentTime);
-
-    // Fade in. Jumping straight to the target is what clicked before.
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.12);
-
-    osc.connect(filter).connect(gain).connect(ctx.destination);
-    osc.start();
-    lfo.start();
-
-    whirlRef.current = { osc, lfo, gain };
+    soundOnRef.current = true;
     setIsBeatPlaying(true);
-    console.log('🔍 ✅ Whirl started');
+    playWhoosh(); // the pass already on screen
+    console.log('🔍 ✅ Carousel sound armed');
   };
 
-  // Fade the whirl out rather than cutting it, which would pop
   const stopWhirlSound = () => {
-    const nodes = whirlRef.current;
-    if (!nodes || !audioContext || audioContext.state === 'closed') {
-      whirlRef.current = null;
-      setIsBeatPlaying(false);
-      return;
-    }
-
-    const { osc, lfo, gain } = nodes;
-    const now = audioContext.currentTime;
-    try {
-      gain.gain.cancelScheduledValues(now);
-      gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-      osc.stop(now + 0.15);
-      lfo.stop(now + 0.15);
-    } catch (error) {
-      console.log('🔍 Could not stop whirl cleanly:', error);
-    }
-
-    whirlRef.current = null;
+    soundOnRef.current = false;
     setIsBeatPlaying(false);
-    console.log('🔍 Whirl stopped');
   };
+
+  // One wind pass per envelope. Keyed on the index so it fires exactly once
+  // per change, in step with the slide.
+  useEffect(() => {
+    if (!soundOnRef.current || !isAnimating || showAllEnvelopes) return;
+    playWhoosh();
+    // playWhoosh reads refs and the audio context; re-running on index alone is
+    // what keeps one sound per pass.
+  }, [currentEnvelopeIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Function to restart whirling sound (if all envelopes are deselected)
   const restartWhirlSound = () => {

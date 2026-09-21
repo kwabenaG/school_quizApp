@@ -3,11 +3,13 @@
 /**
  * One envelope in the Spell Challenge pack picker.
  *
- * This replaces four near-identical copies of the same markup, each of which
- * derived its colours by substring-matching Tailwind class names
- * (`colors.bg.includes('blue') ? '#3b82f6' : ...`). Colours are now data.
+ * Drawn as an actual envelope rather than a rounded card: landscape, with the
+ * four folded panels of a sealed envelope seen from the back — left and right
+ * flaps meeting in the middle, the bottom flap over them, and the sealing flap
+ * on top. An earlier version was a portrait rectangle with a single triangle,
+ * which read as a playing card.
  *
- * It renders a real <button>: the originals were click-handled <div>s, so the
+ * It renders a real <button>. The originals were click-handled <div>s, so the
  * page told people to "click on the sliding envelopes" while giving keyboard
  * and screen-reader users nothing to click.
  */
@@ -29,25 +31,13 @@ export const ENVELOPE_TONES: EnvelopeTone[] = [
 
 type EnvelopeSize = 'sm' | 'md' | 'lg' | 'fluid';
 
-const SIZES: Record<EnvelopeSize, { box: string; label: string; radius: string }> = {
-  sm: { box: 'h-20 w-16', label: 'text-[0.65rem]', radius: 'rounded-lg' },
-  md: {
-    box: 'h-32 w-24 sm:h-44 sm:w-32 lg:h-56 lg:w-44',
-    label: 'text-sm sm:text-base lg:text-lg',
-    radius: 'rounded-xl sm:rounded-2xl',
-  },
-  lg: {
-    box: 'h-64 w-48 sm:h-80 sm:w-60 lg:h-[26rem] lg:w-80',
-    label: 'text-xl sm:text-2xl lg:text-3xl',
-    radius: 'rounded-2xl sm:rounded-3xl',
-  },
+const SIZES: Record<EnvelopeSize, string> = {
+  sm: 'h-14 w-20',
+  md: 'h-24 w-36 sm:h-28 sm:w-44',
+  lg: 'h-44 w-64 sm:h-56 sm:w-80 lg:h-72 lg:w-[26rem]',
   // Fills whatever cell it is given, so a row of packs spans the screen
   // instead of wrapping at a fixed width.
-  fluid: {
-    box: 'w-full aspect-[3/4]',
-    label: 'text-sm sm:text-lg lg:text-xl',
-    radius: 'rounded-xl sm:rounded-2xl',
-  },
+  fluid: 'w-full aspect-[3/2]',
 };
 
 interface SpellEnvelopeProps {
@@ -57,10 +47,18 @@ interface SpellEnvelopeProps {
   size?: EnvelopeSize;
   selected?: boolean;
   onSelect?: () => void;
-  /** Non-interactive rendering, e.g. inside the selected-packs list. */
+  /** Non-interactive rendering, e.g. inside the opened-packs list. */
   asStatic?: boolean;
   className?: string;
 }
+
+// Envelope geometry, in viewBox units. Panels meet at (150, 104).
+const W = 300;
+const H = 200;
+const MX = W / 2;
+const MY = 104;
+/** How far down the sealing flap reaches. Slightly past the panel meet. */
+const FLAP_Y = 118;
 
 export function SpellEnvelope({
   label,
@@ -72,43 +70,96 @@ export function SpellEnvelope({
   className = '',
 }: SpellEnvelopeProps) {
   const tone = ENVELOPE_TONES[toneIndex % ENVELOPE_TONES.length];
-  const dims = SIZES[size];
 
   const body = (
-    <span
-      className={`relative block ${dims.box} ${dims.radius} shadow-lg transition-transform duration-300`}
-      style={{ backgroundColor: tone.body }}
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className={`block h-full w-full drop-shadow-lg ${asStatic ? '' : 'transition-transform duration-300'}`}
+      role="presentation"
     >
-      {/* Flap: a real V rather than the old skewed bar */}
-      <span
-        className="absolute inset-x-0 top-0 block h-[62%]"
-        style={{
-          backgroundColor: tone.flap,
-          clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-        }}
+      {/* Paper */}
+      <rect x="0" y="0" width={W} height={H} rx="10" fill={tone.body} />
+
+      {/* Side panels folded in. Shaded rather than recoloured so one tone
+          drives the whole envelope. */}
+      <path d={`M0 0 L${MX} ${MY} L0 ${H} Z`} fill="rgba(0,0,0,0.10)" />
+      <path d={`M${W} 0 L${MX} ${MY} L${W} ${H} Z`} fill="rgba(0,0,0,0.10)" />
+
+      {/* Bottom panel folded over them */}
+      <path d={`M0 ${H} L${MX} ${MY} L${W} ${H} Z`} fill="rgba(0,0,0,0.04)" />
+      <path
+        d={`M0 ${H} L${MX} ${MY} L${W} ${H}`}
+        fill="none"
+        stroke="rgba(255,255,255,0.22)"
+        strokeWidth="1.5"
       />
-      {/* Seam catching the light along the flap edge */}
-      <span
-        className="pointer-events-none absolute inset-0 block"
-        style={{
-          background:
-            'linear-gradient(to bottom, rgba(255,255,255,0.14), rgba(255,255,255,0) 62%)',
-        }}
+
+      {/* Sealing flap, last so it sits over everything */}
+      <path d={`M0 0 L${MX} ${FLAP_Y} L${W} 0 Z`} fill={tone.flap} />
+      <path
+        d={`M0 0 L${MX} ${FLAP_Y} L${W} 0`}
+        fill="none"
+        stroke="rgba(0,0,0,0.18)"
+        strokeWidth="2"
       />
-      <span
-        className={`absolute inset-x-0 bottom-0 block px-2 pb-2 text-center font-bold text-white ${dims.label}`}
+      {/* Light catching the fold */}
+      <path
+        d={`M0 2 L${MX} ${FLAP_Y - 3} L${W} 2`}
+        fill="none"
+        stroke="rgba(255,255,255,0.20)"
+        strokeWidth="1.5"
+      />
+
+      {/* Seal at the point of the flap */}
+      <circle cx={MX} cy={FLAP_Y - 8} r="13" fill="rgba(255,255,255,0.92)" />
+      <circle
+        cx={MX}
+        cy={FLAP_Y - 8}
+        r="13"
+        fill="none"
+        stroke="rgba(0,0,0,0.12)"
+        strokeWidth="1.5"
+      />
+      <text
+        x={MX}
+        y={FLAP_Y - 3}
+        textAnchor="middle"
+        fontSize="15"
+        fontWeight="800"
+        fill={tone.flap}
+      >
+        {label.replace(/\D/g, '') || '?'}
+      </text>
+
+      {/* Name, sitting on the bottom panel */}
+      <text
+        x={MX}
+        y={H - 22}
+        textAnchor="middle"
+        fontSize="26"
+        fontWeight="800"
+        fill="#fff"
+        style={{ letterSpacing: '0.02em' }}
       >
         {label}
-      </span>
-      <span
-        className={`pointer-events-none absolute inset-0 block ${dims.radius} border border-white/25`}
+      </text>
+
+      <rect
+        x="0.75"
+        y="0.75"
+        width={W - 1.5}
+        height={H - 1.5}
+        rx="10"
+        fill="none"
+        stroke="rgba(255,255,255,0.28)"
+        strokeWidth="1.5"
       />
-    </span>
+    </svg>
   );
 
   if (asStatic) {
     return (
-      <span className={`inline-block ${className}`} aria-hidden>
+      <span className={`inline-block ${SIZES[size]} ${className}`} aria-hidden>
         {body}
       </span>
     );
@@ -120,7 +171,7 @@ export function SpellEnvelope({
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={selected ? `${label}, opened` : `Open ${label}`}
-      className={`group block w-full rounded-2xl transition-transform duration-300 hover:scale-105 focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 ${className}`}
+      className={`group block rounded-xl transition-transform duration-300 hover:scale-105 focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 ${SIZES[size]} ${className}`}
       style={{ ['--tw-ring-color' as string]: tone.ring }}
     >
       {body}

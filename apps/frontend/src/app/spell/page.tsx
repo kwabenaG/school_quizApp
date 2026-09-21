@@ -542,9 +542,6 @@ export default function SpellPage() {
                 selected={envelope.isSelected}
                 onSelect={() => selectEnvelope(envelope)}
               />
-              <span className="text-sm font-semibold text-slate-700">
-                {envelope.label}
-              </span>
             </div>
           ))}
         </div>
@@ -580,9 +577,6 @@ export default function SpellPage() {
           size="lg"
           onSelect={() => selectEnvelope(currentEnvelope)}
         />
-        <span className="text-lg font-semibold text-slate-700 sm:text-xl">
-          {currentEnvelope.label}
-        </span>
       </div>
     );
   };
@@ -840,9 +834,6 @@ export default function SpellPage() {
                               size="fluid"
                               onSelect={() => selectEnvelope(envelope)}
                             />
-                            <span className="text-sm font-semibold text-slate-700">
-                              {envelope.label}
-                            </span>
                           </div>
                         ))}
                       </div>

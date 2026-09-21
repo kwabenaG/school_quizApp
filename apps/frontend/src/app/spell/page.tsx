@@ -205,6 +205,9 @@ export default function SpellPage() {
    * wobbled by an LFO and rolled off with a lowpass, at a gain that leaves
    * plenty of headroom.
    */
+  const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const whirlRef = useRef<{
     osc: OscillatorNode;
     lfo: OscillatorNode;
@@ -446,34 +449,52 @@ export default function SpellPage() {
   }, [envelopes.filter(env => !env.isSelected).length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSlidingAnimation = () => {
-    // Clear existing interval
-    if (animationInterval) {
-      clearInterval(animationInterval);
+    // Held in a ref as well as state: the state value is stale inside the
+    // closures below, which previously let a second interval be created
+    // without the first being cleared.
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+      slideIntervalRef.current = null;
     }
-    
-    // Set animating state to true
+    if (fanTimeoutRef.current) {
+      clearTimeout(fanTimeoutRef.current);
+      fanTimeoutRef.current = null;
+    }
+
     setIsAnimating(true);
-    
+
     const interval = setInterval(() => {
+      // The fan-out lasts 3s while this ticks every 2s. Advancing underneath
+      // it burned an envelope invisibly, so the next lap began on the second
+      // pack and the first was never shown again.
+      if (fanTimeoutRef.current) return;
+
       setCurrentEnvelopeIndex(prevIndex => {
-    const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
+        const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
         if (nonSelectedEnvelopes.length === 0) return prevIndex;
-        
+
         const currentIndex = (prevIndex + 1) % nonSelectedEnvelopes.length;
-        
-        // When we reach the last envelope, show all envelopes
+
+        // Completed a lap: fan the remaining packs out, then start again from
+        // the first one.
         if (currentIndex === 0 && nonSelectedEnvelopes.length > 1) {
           setShowAllEnvelopes(true);
-          // After showing all envelopes for 3 seconds, go back to carousel
-          setTimeout(() => {
+          fanTimeoutRef.current = setTimeout(() => {
+            fanTimeoutRef.current = null;
             setShowAllEnvelopes(false);
+            setCurrentEnvelopeIndex(0);
+            // Restart the timer so the new lap begins a fresh 2s slot. The 3s
+            // fan does not divide into the 2s cadence, so without this the
+            // first pack of every lap is cut to about one second.
+            startSlidingAnimation();
           }, 3000);
         }
-        
+
         return currentIndex;
       });
     }, 2000); // Change envelope every 2 seconds
-    
+
+    slideIntervalRef.current = interval;
     setAnimationInterval(interval);
   };
 
@@ -488,11 +509,17 @@ export default function SpellPage() {
       stopWhirlSound();
     }
     
-    // Clear any existing animation interval
-    if (animationInterval) {
-      clearInterval(animationInterval);
-      setAnimationInterval(null);
+    // Clear the interval and any pending fan-out; a fan timer left running
+    // would reset the index after the restart had already set it.
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+      slideIntervalRef.current = null;
     }
+    if (fanTimeoutRef.current) {
+      clearTimeout(fanTimeoutRef.current);
+      fanTimeoutRef.current = null;
+    }
+    setAnimationInterval(null);
     
     // Reset all states immediately
     setIsAnimating(false);

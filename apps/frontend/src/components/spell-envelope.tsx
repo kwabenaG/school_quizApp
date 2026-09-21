@@ -27,15 +27,26 @@ export const ENVELOPE_TONES: EnvelopeTone[] = [
   { body: '#0d9488', flap: '#0f766e', ring: '#14b8a6' }, // teal
 ];
 
-type EnvelopeSize = 'sm' | 'md' | 'lg';
+type EnvelopeSize = 'sm' | 'md' | 'lg' | 'fluid';
 
 const SIZES: Record<EnvelopeSize, { box: string; label: string; radius: string }> = {
   sm: { box: 'h-20 w-16', label: 'text-[0.65rem]', radius: 'rounded-lg' },
-  md: { box: 'h-24 w-[4.5rem] sm:h-28 sm:w-[5.25rem]', label: 'text-xs', radius: 'rounded-xl' },
+  md: {
+    box: 'h-32 w-24 sm:h-44 sm:w-32 lg:h-56 lg:w-44',
+    label: 'text-sm sm:text-base lg:text-lg',
+    radius: 'rounded-xl sm:rounded-2xl',
+  },
   lg: {
-    box: 'h-52 w-40 sm:h-60 sm:w-48 lg:h-72 lg:w-56',
-    label: 'text-base sm:text-lg lg:text-xl',
-    radius: 'rounded-2xl',
+    box: 'h-64 w-48 sm:h-80 sm:w-60 lg:h-[26rem] lg:w-80',
+    label: 'text-xl sm:text-2xl lg:text-3xl',
+    radius: 'rounded-2xl sm:rounded-3xl',
+  },
+  // Fills whatever cell it is given, so a row of packs spans the screen
+  // instead of wrapping at a fixed width.
+  fluid: {
+    box: 'w-full aspect-[3/4]',
+    label: 'text-sm sm:text-lg lg:text-xl',
+    radius: 'rounded-xl sm:rounded-2xl',
   },
 };
 
@@ -109,7 +120,7 @@ export function SpellEnvelope({
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={selected ? `${label}, opened` : `Open ${label}`}
-      className={`group rounded-2xl transition-transform duration-300 hover:scale-105 focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 ${className}`}
+      className={`group block w-full rounded-2xl transition-transform duration-300 hover:scale-105 focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-100 motion-reduce:transition-none motion-reduce:hover:scale-100 ${className}`}
       style={{ ['--tw-ring-color' as string]: tone.ring }}
     >
       {body}

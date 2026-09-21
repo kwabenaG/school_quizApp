@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Mail, PartyPopper, Play, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,7 +67,7 @@ export default function SpellPage() {
     .envelope-container {
       position: relative;
       width: 100%;
-      height: 500px;
+      height: 560px;
       overflow: hidden;
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 51, 234, 0.08) 50%, rgba(236, 72, 153, 0.08) 100%);
       border-radius: 2rem;
@@ -80,25 +80,25 @@ export default function SpellPage() {
     }
     @media (min-width: 375px) {
       .envelope-container {
-        height: 300px;
+        height: 380px;
       }
     }
     @media (min-width: 640px) {
       .envelope-container {
-        height: 550px;
+        height: 760px;
         border-radius: 2.5rem;
       }
     }
     @media (min-width: 1024px) {
       .envelope-container {
-        height: 580px;
+        height: 680px;
         border-radius: 3rem;
         margin: 0 auto;
       }
     }
     @media (min-width: 1280px) {
       .envelope-container {
-        height: 600px;
+        height: 720px;
         margin: 0 auto;
       }
     }
@@ -130,7 +130,6 @@ export default function SpellPage() {
   const [currentEnvelopeIndex, setCurrentEnvelopeIndex] = useState(0);
   const [showAllEnvelopes, setShowAllEnvelopes] = useState(false);
   const [animationInterval, setAnimationInterval] = useState<NodeJS.Timeout | null>(null);
-  const [whirlSoundInterval, setWhirlSoundInterval] = useState<NodeJS.Timeout | null>(null);
   const [audioContextReady, setAudioContextReady] = useState(false);
   const [showAudioPrompt, setShowAudioPrompt] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -193,54 +192,24 @@ export default function SpellPage() {
     };
   }, [audioContextReady, audioContext]);
 
-  // Function to play whirling sound
-  const playWhirlSound = () => {
-    console.log('🔍 🔊 playWhirlSound called - audioContext:', !!audioContext, 'state:', audioContext?.state);
-    
-    if (!audioContext) {
-      console.log('🔍 ❌ Cannot play whirl sound - no audio context');
-      return;
-    }
-    
-    if (audioContext.state === 'closed') {
-      console.log('🔍 ❌ Cannot play whirl sound - audio context is closed');
-      return;
-    }
-    
-    if (audioContext.state === 'suspended') {
-      console.log('🔍 ⏸️ Audio context is suspended, attempting to resume...');
-      audioContext.resume().then(() => {
-        console.log('🔍 ✅ Audio context resumed, retrying sound');
-        playWhirlSound();
-      }).catch(error => {
-        console.log('🔍 ❌ Could not resume audio context:', error);
-      });
-      return;
-    }
-    
-    try {
-      console.log('🔍 🎵 Creating oscillator...');
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Create a very simple, loud sound
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
-      
-      // Very loud volume
-      gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-      
-      console.log('🔍 🔊✅ Playing simple sound - should be very loud');
-    } catch (error) {
-      console.log('🔍 ❌ Could not play whirling sound:', error);
-    }
-  };
+  /**
+   * Handles to the running whirl so it can be faded out cleanly.
+   *
+   * The previous version fired a 500ms note every 200ms at full gain, so two
+   * or three notes overlapped at any moment and summed past 1.0 — that
+   * clipping is what made it sound broken. It also jumped straight to full
+   * volume with no attack, clicking on every note, and held a constant 440Hz,
+   * which is a beep rather than anything whirling.
+   *
+   * This is one continuous oscillator instead: a triangle tone whose pitch is
+   * wobbled by an LFO and rolled off with a lowpass, at a gain that leaves
+   * plenty of headroom.
+   */
+  const whirlRef = useRef<{
+    osc: OscillatorNode;
+    lfo: OscillatorNode;
+    gain: GainNode;
+  } | null>(null);
 
   // Function to play selection sound
   const playSelectionSound = () => {
@@ -253,15 +222,19 @@ export default function SpellPage() {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
+      oscillator.type = 'triangle';
       // Create a selection sound
       oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
       oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
       
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      // Ramp the attack: setting gain straight to its peak steps the signal
+      // and clicks.
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.16, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.14);
       
       oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.1);
+      oscillator.stop(audioContext.currentTime + 0.15);
     } catch (error) {
       console.log('🔍 Could not play selection sound:', error);
     }
@@ -278,13 +251,15 @@ export default function SpellPage() {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
+      oscillator.type = 'triangle';
       // Create a completion sound
       oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
       oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.2);
       oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.4);
       
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.45);
       
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.4);
@@ -295,12 +270,12 @@ export default function SpellPage() {
 
   // Function to start whirling sound
   const startWhirlSound = async () => {
-    console.log('🔍 ===== startWhirlSound CALLED =====');
-    console.log('🔍 Current state - isBeatPlaying:', isBeatPlaying, 'whirlSoundInterval exists:', !!whirlSoundInterval);
-    
-    // Always stop any existing beat first
-    console.log('🔍 Stopping any existing beat...');
-    stopWhirlSound();
+    // Idempotent on purpose. The effect that calls this re-runs on most
+    // renders, and the carousel re-renders constantly while spinning, so
+    // tearing the whirl down and rebuilding it each time made it stutter.
+    if (whirlRef.current) {
+      return;
+    }
     
     // Create new audio context if needed
     if (!audioContext || audioContext.state === 'closed') {
@@ -339,38 +314,70 @@ export default function SpellPage() {
     startWhirlSoundLoop();
   };
 
-  // Separate function to start the actual sound loop
+  // Start the continuous whirl
   const startWhirlSoundLoop = () => {
-    const currentContext = audioContext;
-    if (!currentContext || currentContext.state === 'closed') {
-      console.log('🔍 ❌ Cannot start sound loop - no valid audio context');
+    const ctx = audioContext;
+    if (!ctx || ctx.state === 'closed') {
+      console.log('🔍 ❌ Cannot start whirl - no valid audio context');
       return;
     }
-    
-    console.log('🔍 ✅ Starting beat loop, audio context state:', currentContext.state);
+
+    const osc = ctx.createOscillator();
+    const lfo = ctx.createOscillator();
+    const lfoDepth = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    // Tone: a triangle sits between a harsh saw and a bare sine.
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(230, ctx.currentTime);
+
+    // The wobble that makes it read as spinning rather than beeping.
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(5.5, ctx.currentTime);
+    lfoDepth.gain.setValueAtTime(55, ctx.currentTime);
+    lfo.connect(lfoDepth).connect(osc.frequency);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1100, ctx.currentTime);
+
+    // Fade in. Jumping straight to the target is what clicked before.
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.07, ctx.currentTime + 0.12);
+
+    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.start();
+    lfo.start();
+
+    whirlRef.current = { osc, lfo, gain };
     setIsBeatPlaying(true);
-    
-    // Use setInterval instead of setTimeout recursion
-    const interval = setInterval(() => {
-      console.log('🔍 🔊 Beat tick - playing sound');
-      playWhirlSound();
-    }, 200);
-    
-    setWhirlSoundInterval(interval as unknown as NodeJS.Timeout);
-    console.log('🔍 ✅ Beat interval set, isBeatPlaying should be true');
-    console.log('🔍 ===== startWhirlSound COMPLETE =====');
+    console.log('🔍 ✅ Whirl started');
   };
 
-  // Function to stop whirling sound
+  // Fade the whirl out rather than cutting it, which would pop
   const stopWhirlSound = () => {
-    console.log('🔍 stopWhirlSound called');
-    if (whirlSoundInterval) {
-      clearInterval(whirlSoundInterval as unknown as NodeJS.Timeout);
-      setWhirlSoundInterval(null);
-      console.log('🔍 Cleared whirl sound interval');
+    const nodes = whirlRef.current;
+    if (!nodes || !audioContext || audioContext.state === 'closed') {
+      whirlRef.current = null;
+      setIsBeatPlaying(false);
+      return;
     }
+
+    const { osc, lfo, gain } = nodes;
+    const now = audioContext.currentTime;
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.stop(now + 0.15);
+      lfo.stop(now + 0.15);
+    } catch (error) {
+      console.log('🔍 Could not stop whirl cleanly:', error);
+    }
+
+    whirlRef.current = null;
     setIsBeatPlaying(false);
-    console.log('🔍 Whirl sound stopped');
+    console.log('🔍 Whirl stopped');
   };
 
   // Function to restart whirling sound (if all envelopes are deselected)
@@ -403,7 +410,9 @@ export default function SpellPage() {
     } else {
       console.log('🔍 Beat not starting - isAnimating:', isAnimating, 'audioContextReady:', audioContextReady, 'audioContext:', !!audioContext, 'state:', audioContext?.state);
     }
-  }, [isAnimating, audioContextReady, audioContext, startWhirlSound]); // Include all dependencies
+    // startWhirlSound is deliberately not a dependency: it is recreated every
+    // render, and starting is idempotent.
+  }, [isAnimating, audioContextReady, audioContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isAnimating) {
@@ -513,7 +522,7 @@ export default function SpellPage() {
 
     if (showAllEnvelopes) {
       return (
-        <div className="flex h-full flex-wrap items-center justify-center gap-4 sm:gap-6">
+        <div className="grid h-full w-full grid-cols-2 items-center gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-6">
           {nonSelectedEnvelopes.map((envelope, index) => (
             <div
               key={envelope.id}
@@ -529,7 +538,7 @@ export default function SpellPage() {
               <SpellEnvelope
                 label={envelope.label}
                 toneIndex={envelope.id - 1}
-                size="md"
+                size="fluid"
                 selected={envelope.isSelected}
                 onSelect={() => selectEnvelope(envelope)}
               />
@@ -729,7 +738,6 @@ export default function SpellPage() {
                 console.log('🔍 ===== BUTTON CLICKED =====');
                 console.log('🔍 Current state - isAnimating:', isAnimating, 'isBeatPlaying:', isBeatPlaying);
                 console.log('🔍 Audio context state:', audioContext?.state, 'audioContextReady:', audioContextReady);
-                console.log('🔍 Whirl sound interval exists:', !!whirlSoundInterval);
 
                 // Ensure audio context is ready
                 if (!audioContext || audioContext.state === 'closed') {
@@ -807,7 +815,7 @@ export default function SpellPage() {
         </div>
 
         {/* Stage + selected list */}
-        <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_20rem]">
+        <div className="mt-12 space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-6 sm:p-8">
             <div className={isAnimating ? 'envelope-container w-full' : 'w-full'}>
               {isAnimating ? (
@@ -823,13 +831,13 @@ export default function SpellPage() {
                         Start the carousel, or pick one straight from here.
                       </p>
 
-                      <div className="mt-8 flex flex-wrap justify-center gap-4">
+                      <div className="mt-8 grid w-full grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-6">
                         {remaining.map((envelope) => (
                           <div key={envelope.id} className="flex flex-col items-center gap-3">
                             <SpellEnvelope
                               label={envelope.label}
                               toneIndex={envelope.id - 1}
-                              size="md"
+                              size="fluid"
                               onSelect={() => selectEnvelope(envelope)}
                             />
                             <span className="text-sm font-semibold text-slate-700">
@@ -868,20 +876,17 @@ export default function SpellPage() {
 
           {/* Opened packs */}
           <aside className="rounded-2xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold">Opened packs</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {selectedCount === 0
-                ? 'Nothing opened yet.'
-                : `${selectedCount} of ${envelopes.length} claimed.`}
-            </p>
-
-            {selectedPack && (
-              <p className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-800">
-                Latest: {selectedPack.label}
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold">Opened packs</h2>
+              <p className="text-sm text-slate-500">
+                {selectedCount === 0
+                  ? 'Nothing opened yet.'
+                  : `${selectedCount} of ${envelopes.length} claimed.`}
+                {selectedPack ? ` Latest: ${selectedPack.label}.` : ''}
               </p>
-            )}
+            </div>
 
-            <ul className="mt-5 space-y-3">
+            <ul className="mt-5 flex flex-wrap gap-3">
               {envelopes
                 .filter((env) => env.isSelected)
                 .map((envelope) => (

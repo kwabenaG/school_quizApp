@@ -204,6 +204,8 @@ export default function SpellPage() {
    * wobbled by an LFO and rolled off with a lowpass, at a gain that leaves
    * plenty of headroom.
    */
+  const indexRef = useRef(0);
+  const envelopesRef = useRef<EnvelopePack[]>([]);
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -490,7 +492,7 @@ export default function SpellPage() {
   }, [envelopes.filter(env => !env.isSelected).length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startSlidingAnimation = () => {
-    // Held in a ref as well as state: the state value is stale inside the
+    // Held in refs as well as state: the state values are stale inside the
     // closures below, which previously let a second interval be created
     // without the first being cleared.
     if (slideIntervalRef.current) {
@@ -510,34 +512,48 @@ export default function SpellPage() {
       // pack and the first was never shown again.
       if (fanTimeoutRef.current) return;
 
-      setCurrentEnvelopeIndex(prevIndex => {
-        const nonSelectedEnvelopes = envelopes.filter(env => !env.isSelected);
-        if (nonSelectedEnvelopes.length === 0) return prevIndex;
+      // Everything below stays out of a setState updater. React invokes
+      // updaters twice in development to surface impure ones, which scheduled
+      // the fan-out twice and fired two whooshes on top of each other.
+      const remainingPacks = envelopesRef.current.filter(env => !env.isSelected);
+      if (remainingPacks.length === 0) return;
 
-        const currentIndex = (prevIndex + 1) % nonSelectedEnvelopes.length;
+      const nextIndex = (indexRef.current + 1) % remainingPacks.length;
+      indexRef.current = nextIndex;
+      setCurrentEnvelopeIndex(nextIndex);
 
-        // Completed a lap: fan the remaining packs out, then start again from
-        // the first one.
-        if (currentIndex === 0 && nonSelectedEnvelopes.length > 1) {
-          setShowAllEnvelopes(true);
-          fanTimeoutRef.current = setTimeout(() => {
-            fanTimeoutRef.current = null;
-            setShowAllEnvelopes(false);
-            setCurrentEnvelopeIndex(0);
-            // Restart the timer so the new lap begins a fresh 2s slot. The 3s
-            // fan does not divide into the 2s cadence, so without this the
-            // first pack of every lap is cut to about one second.
-            startSlidingAnimation();
-          }, 3000);
-        }
-
-        return currentIndex;
-      });
+      // Completed a lap: fan the remaining packs out, then start again from
+      // the first one.
+      if (nextIndex === 0 && remainingPacks.length > 1) {
+        setShowAllEnvelopes(true);
+        fanTimeoutRef.current = setTimeout(() => {
+          fanTimeoutRef.current = null;
+          setShowAllEnvelopes(false);
+          indexRef.current = 0;
+          setCurrentEnvelopeIndex(0);
+          // The index is already 0 coming out of the fan, so setting it to 0
+          // is not a change and the effect that plays the wind never fires.
+          // Every lap after the first was silent on its opening pack.
+          if (soundOnRef.current) playWhoosh();
+          // Restart the timer so the new lap begins a fresh 2s slot. The 3s
+          // fan does not divide into the 2s cadence, so without this the
+          // first pack of every lap is cut to about one second.
+          startSlidingAnimation();
+        }, 3000);
+      }
     }, 2000); // Change envelope every 2 seconds
 
     slideIntervalRef.current = interval;
     setAnimationInterval(interval);
   };
+
+  useEffect(() => {
+    envelopesRef.current = envelopes;
+  }, [envelopes]);
+
+  useEffect(() => {
+    indexRef.current = currentEnvelopeIndex;
+  }, [currentEnvelopeIndex]);
 
   // Function to restart the carousel
   const restartCarousel = () => {
@@ -565,6 +581,7 @@ export default function SpellPage() {
     // Reset all states immediately
     setIsAnimating(false);
     setSelectedPack(null);
+    indexRef.current = 0;
     setCurrentEnvelopeIndex(0);
     setShowAllEnvelopes(false);
     

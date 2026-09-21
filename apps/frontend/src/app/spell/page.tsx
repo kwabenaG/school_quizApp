@@ -143,9 +143,8 @@ export default function SpellPage() {
       }
       
       try {
-        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        setAudioContext(ctx);
-        setAudioContextReady(true);
+        const ctx = ensureAudioContext();
+        if (!ctx) return;
         console.log('🔍 Audio context initialized, state:', ctx.state);
         
         // Resume context if suspended
@@ -217,6 +216,35 @@ export default function SpellPage() {
    * fired every 200ms and summed past full scale.
    */
   const soundOnRef = useRef(false);
+  /**
+   * The context also lives in a ref.
+   *
+   * It was held only in state, and the sound callbacks close over the value
+   * from the render they were created in. Right after the click that builds
+   * the context those closures still saw null, so the opening envelopes made
+   * no sound at all and the wind only started three or four packs in.
+   */
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  /** Returns a usable context, creating or resuming it as needed. */
+  const ensureAudioContext = (): AudioContext | null => {
+    const existing = audioCtxRef.current;
+    if (existing && existing.state !== 'closed') {
+      if (existing.state === 'suspended') existing.resume().catch(() => {});
+      return existing;
+    }
+    try {
+      const ctx = new (window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      audioCtxRef.current = ctx;
+      setAudioContext(ctx);
+      setAudioContextReady(true);
+      return ctx;
+    } catch (error) {
+      console.log('🔍 Could not create audio context:', error);
+      return null;
+    }
+  };
   const noiseBufferRef = useRef<AudioBuffer | null>(null);
 
   const getNoiseBuffer = (ctx: AudioContext) => {
@@ -233,15 +261,8 @@ export default function SpellPage() {
 
   /** One envelope going past. */
   const playWhoosh = () => {
-    const ctx = audioContext;
-    if (!ctx || ctx.state === 'closed') return;
-
-    // A context can still be suspended for the first pass or two after the
-    // click that created it. Bailing out on anything but 'running' left the
-    // opening envelopes silent, so nudge it and play regardless.
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
 
     const now = ctx.currentTime;
     const duration = 0.6;
@@ -270,7 +291,8 @@ export default function SpellPage() {
 
   // Function to play selection sound
   const playSelectionSound = () => {
-    if (!audioContext || audioContext.state === 'closed') return;
+    const audioContext = ensureAudioContext();
+    if (!audioContext) return;
     
     try {
       const oscillator = audioContext.createOscillator();
@@ -299,7 +321,8 @@ export default function SpellPage() {
 
   // Function to play completion sound
   const playCompletionSound = () => {
-    if (!audioContext || audioContext.state === 'closed') return;
+    const audioContext = ensureAudioContext();
+    if (!audioContext) return;
     
     try {
       const oscillator = audioContext.createOscillator();
@@ -338,8 +361,8 @@ export default function SpellPage() {
     if (!audioContext || audioContext.state === 'closed') {
       console.log('🔍 Creating new audio context...');
       try {
-        const newContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        setAudioContext(newContext);
+        const newContext = ensureAudioContext();
+        if (!newContext) return;
         console.log('🔍 ✅ New audio context created, state:', newContext.state);
       } catch (error) {
         console.log('🔍 ❌ Could not create audio context:', error);
@@ -374,8 +397,8 @@ export default function SpellPage() {
   // Arm the carousel sound. Each envelope pass plays its own whoosh, driven
   // by the effect on currentEnvelopeIndex below.
   const startWhirlSoundLoop = () => {
-    const ctx = audioContext;
-    if (!ctx || ctx.state === 'closed') {
+    const ctx = ensureAudioContext();
+    if (!ctx) {
       console.log('🔍 ❌ Cannot start carousel sound - no valid audio context');
       return;
     }
@@ -448,6 +471,7 @@ export default function SpellPage() {
       if (audioContext && audioContext.state !== 'closed') {
         try {
           audioContext.close();
+          audioCtxRef.current = null;
         } catch (error) {
           console.log('🔍 AudioContext already closed or error closing:', error);
         }
@@ -684,9 +708,7 @@ export default function SpellPage() {
         // Start audio on first click if not already started
         if (!audioContextReady && !audioContext) {
           try {
-            const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-            setAudioContext(ctx);
-            setAudioContextReady(true);
+            ensureAudioContext();
             setShowAudioPrompt(false);
             console.log('🔍 Audio context initialized on click');
           } catch (error) {
@@ -781,9 +803,8 @@ export default function SpellPage() {
                 if (!audioContext || audioContext.state === 'closed') {
                   console.log('🔍 Creating new audio context...');
                   try {
-                    const newContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-                    setAudioContext(newContext);
-                    setAudioContextReady(true);
+                    const newContext = ensureAudioContext();
+                    if (!newContext) return;
                     console.log('🔍 ✅ New audio context created, state:', newContext.state);
                   } catch (error) {
                     console.log('🔍 ❌ Could not create audio context:', error);

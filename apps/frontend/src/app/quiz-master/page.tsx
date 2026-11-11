@@ -959,7 +959,7 @@ export default function QuizMasterPage() {
 
         {/* Countdown overlay */}
         {countdown > 0 && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950">
             <div className="text-center">
               <div className="font-mono text-[14rem] leading-none font-black text-white tabular-nums">
                 {countdown}
@@ -1262,7 +1262,7 @@ export default function QuizMasterPage() {
 
       {/* Countdown overlay */}
       {countdown > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950">
           <div className="text-center">
             <div className="font-mono text-[10rem] leading-none font-black text-white tabular-nums">
               {countdown}

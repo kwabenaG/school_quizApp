@@ -156,7 +156,7 @@ export default function Home() {
                       <span className="grid size-10 place-items-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/25">
                         <step.icon className="size-5" />
                       </span>
-                      <span className="font-mono text-sm font-semibold text-slate-400 tabular-nums">
+                      <span className="font-mono text-sm font-semibold text-slate-600 tabular-nums dark:text-slate-300">
                         0{i + 1}
                       </span>
                     </div>
